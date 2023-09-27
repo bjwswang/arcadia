@@ -1,0 +1,16 @@
+apiVersion: v2
+name: fastchat
+description: A Helm chart(KubeBB Component) for Fastchat
+type: application
+version: 0.0.1
+appVersion: "0.2.29"
+keywords:
+  - kubeagi
+  - local_llm
+  - fastchat
+sources:
+  - https://github.com/lm-sys/FastChat
+  - https://github.com/kubeagi/arcadia/tree/main/charts/fastchat
+maintainers:
+  - name: bjwswang
+    url: https://github.com/bjwswang
