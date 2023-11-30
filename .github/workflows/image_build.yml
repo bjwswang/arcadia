@@ -2,14 +2,14 @@ name: Build KubeAGI arcadia image
 
 on:
   push:
-    branches: [main]
+    branches: [gql]
 env:
   GO_VER: 1.20
   GO_TAGS: ""
 
 jobs:
   image:
-    if: github.repository == 'kubeagi/arcadia'
+    if: github.repository == 'bjwswang/arcadia'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -62,15 +62,3 @@ jobs:
             GO_TAGS=${{ env.GO_TAGS }}
             BUILD_ID=${{ env.SEMREV_LABEL }}
             BUILD_DATE=${{ env.BUILD_DATE }}
-      - name: Build data processing image
-        uses: docker/build-push-action@v3
-        with:
-          context: ./data-processing
-          file: ./data-processing/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            kubebb/arcadia-data-processing:latest
-            kubebb/arcadia-data-processing:${{ steps.set-env.outputs.TAG }}
-            kubebb/arcadia-data-processing:v${{ steps.set-env.outputs.DATE }}-${{ steps.short-sha.outputs.sha }}
-            kubebb/arcadia-data-processing:${{ steps.set-env.outputs.TAG }}-${{ steps.set-env.outputs.DATE }}-${{ steps.short-sha.outputs.sha }}
-          push: true
