@@ -28,8 +28,8 @@ func (r *knowledgeBaseMutationResolver) CreateKnowledgeBase(ctx context.Context,
 	var vectorstore v1alpha1.TypedObjectReference
 	vector, _ := config.GetVectorStore(ctx, c)
 	displayname, description, embedder := "", "", ""
-	if input.DisplayName != "" {
-		displayname = input.DisplayName
+	if input.DisplayName != nil {
+		displayname = *input.DisplayName
 	}
 	if input.Description != nil {
 		description = *input.Description
@@ -62,8 +62,8 @@ func (r *knowledgeBaseMutationResolver) UpdateKnowledgeBase(ctx context.Context,
 		return nil, err
 	}
 	name, displayname := "", ""
-	if input.DisplayName != "" {
-		displayname = input.DisplayName
+	if input.DisplayName != nil {
+		displayname = *input.DisplayName
 	}
 	if input.Name != "" {
 		name = input.Name
@@ -136,7 +136,7 @@ func (r *knowledgeBaseQueryResolver) ListKnowledgeBases(ctx context.Context, obj
 	}
 	var filteredResult []generated.PageNode
 	for idx, u := range result {
-		if (name == "" || strings.Contains(u.Name, name)) && (displayName == "" || strings.Contains(u.DisplayName, displayName)) {
+		if (name == "" || strings.Contains(u.Name, name)) && (displayName == "" || strings.Contains(*u.DisplayName, displayName)) {
 			filteredResult = append(filteredResult, result[idx])
 		}
 	}

@@ -166,6 +166,7 @@ type ComplexityRoot struct {
 		ContentType       func(childComplexity int) int
 		CreationTimestamp func(childComplexity int) int
 		Creator           func(childComplexity int) int
+		Description       func(childComplexity int) int
 		DisplayName       func(childComplexity int) int
 		Field             func(childComplexity int) int
 		Labels            func(childComplexity int) int
@@ -187,18 +188,19 @@ type ComplexityRoot struct {
 	}
 
 	Datasource struct {
-		Annotations     func(childComplexity int) int
-		Creator         func(childComplexity int) int
-		Description     func(childComplexity int) int
-		DisplayName     func(childComplexity int) int
-		Endpoint        func(childComplexity int) int
-		FileCount       func(childComplexity int) int
-		Labels          func(childComplexity int) int
-		Name            func(childComplexity int) int
-		Namespace       func(childComplexity int) int
-		Oss             func(childComplexity int) int
-		Status          func(childComplexity int) int
-		UpdateTimestamp func(childComplexity int) int
+		Annotations       func(childComplexity int) int
+		CreationTimestamp func(childComplexity int) int
+		Creator           func(childComplexity int) int
+		Description       func(childComplexity int) int
+		DisplayName       func(childComplexity int) int
+		Endpoint          func(childComplexity int) int
+		FileCount         func(childComplexity int) int
+		Labels            func(childComplexity int) int
+		Name              func(childComplexity int) int
+		Namespace         func(childComplexity int) int
+		Oss               func(childComplexity int) int
+		Status            func(childComplexity int) int
+		UpdateTimestamp   func(childComplexity int) int
 	}
 
 	DatasourceMutation struct {
@@ -958,6 +960,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Dataset.Creator(childComplexity), true
 
+	case "Dataset.description":
+		if e.complexity.Dataset.Description == nil {
+			break
+		}
+
+		return e.complexity.Dataset.Description(childComplexity), true
+
 	case "Dataset.displayName":
 		if e.complexity.Dataset.DisplayName == nil {
 			break
@@ -1078,6 +1087,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Datasource.Annotations(childComplexity), true
+
+	case "Datasource.creationTimestamp":
+		if e.complexity.Datasource.CreationTimestamp == nil {
+			break
+		}
+
+		return e.complexity.Datasource.CreationTimestamp(childComplexity), true
 
 	case "Datasource.creator":
 		if e.complexity.Datasource.Creator == nil {
@@ -2476,10 +2492,17 @@ Dataset
 数据集某个版本完成数据处理后，数据处理服务需要将处理后的存储回 版本数据集
 """
 type Dataset {
-    """数据集名称"""
+    """
+    数据集名称
+    规则: 遵循k8s命名
+    """
     name: String!
 
-    """数据集所在的namespace，也是后续桶的名字"""
+    """
+    数据集所在的namespace(文件上传时作为bucket)
+    规则: 获取当前项目对应的命名空间
+    规则: 非空
+    """
     namespace: String!
 
     """一些用于标记，选择的的标签"""
@@ -2488,35 +2511,56 @@ type Dataset {
     """添加一些辅助性记录信息"""
     annotations: Map
 
-    """创建者，正查给你这个字段是不需要人写的，自动添加"""
+    """
+    创建者，为当前用户的用户名
+    规则: webhook启用后自动添加，默认为空
+    """
     creator: String
 
-    """展示名字， 与metadat.name不一样，这个展示名字是可以用中文的"""
-    displayName: String!
+    """展示名"""
+    displayName: String
 
-    """更新时间, 这里更新指文件同步，或者数据处理完成后，做的更新操作的时间"""
-    updateTimestamp: Time
+    """描述信息"""
+    description: String
 
     """创建时间"""
     creationTimestamp: Time
-    """数据集类型，文本，图片，视频"""
-    contentType: String!
-
-    """应用场景"""
-    field: String
+    """更新时间, 这里更新指文件同步，或者数据处理完成后，做的更新操作的时间"""
+    updateTimestamp: Time
 
     """
-    这个是一个resolver，数据集下面的版本列表。
-    支持对名字，类型的完全匹配过滤。
-    支持通过标签(somelabel=abc)，字段(metadata.name=abc)进行过滤
+    数据集类型，文本，图片，视频
+    规则: enum{ text image video}
+    规则: 非空
+    """
+    contentType: String!
+
+    """
+    应用场景
+    规则: enum{ xx xx } (非固定字段，以产品为准)
+    """
+    field: String
+    """
+    数据集下面的版本列表。
+    规则: 支持对名字，类型的完全匹配过滤。
+    规则: 支持通过标签(somelabel=abc)，字段(metadata.name=abc)进行过滤
     """
     versions(input: ListVersionedDatasetInput!): PaginatedResult!
 }
 
+"""数据集创建的输入"""
 input CreateDatasetInput {
-    """数据集的CR名字，要满足k8s的名称规则"""
+    """
+    数据集的名字
+    规则: k8s的名称规则
+    规则: 非空
+    """
     name: String!
 
+    """
+    数据集的命名空间
+    规则: 非空
+    """
     namespace: String!
 
     """一些标签选择信息，可以不添加"""
@@ -2525,8 +2569,8 @@ input CreateDatasetInput {
     """一些备注用的注视信息，或者记录一个简单的配置"""
     annotations: Map
 
-    """展示名称，用于展示在界面上的，必须填写"""
-    displayName: String!
+    """展示名称"""
+    displayName: String
     
     """描述信息，可以不写"""
     description: String
@@ -2534,75 +2578,117 @@ input CreateDatasetInput {
     """数据集里面的数据的类型，文本，视频，图片"""
     contentType: String!
 
-    """应用场景，可以为空"""
+    """
+    应用场景，可以为空
+    规则: enum{ xx xx } (非固定字段，以产品为准)
+    """
     filed: String
 }
 
+"""数据集更新的输入"""
 input UpdateDatasetInput {
     """
-    name, namespace用来确定资源，不允许修改的。将原数据传递回来即可。
-    """
+    name, namespace用来确定资源
+    规则: 不允许修改的。将原数据传递回来即可。
+    """   
     name: String!
     namespace: String!
 
     """
     更新的的标签信息，这里涉及到增加或者删除标签，
-    所以，如果标签有任何改动，传递完整的label。
+    规则: 不允许修改的。将原数据传递回来即可。    
+    如果标签有任何改动，传递完整的label。
     例如之前的标齐是: abc:def 新增一个标签aa:bb, 那么传递 abc:def, aa:bb
-    """
+    """ 
     labels: Map
     annotations: Map
     
-    """如果不更新，为空就可以"""
+    """如不更新，则为空"""
     displayName: String
 
-    """同理"""
+    """如不更新，则为空"""
     description: String
 }
 
+"""数据集删除的输入"""
 input DeleteDatasetInput {
+    """
+    name, namespace用来确定资源
+    """
     name: String
     namespace: String!
+    
+    """标签选择器"""    
     labelSelector: String
+
+    """字段选择器"""   
     fieldSelector: String
 }
 
+"""数据集分页列表查询的输入"""
 input ListDatasetInput {
-    name: String
+    """
+    namespace用来确定资源
+    规则: 必填
+    """
     namespace: String!
+
+    """name用来唯一确定资源"""
+    name: String
+
+    """展示名"""
     displayName: String
+
+    """标签选择器"""    
     labelSelector: String
+    """字段选择器"""   
     fieldSelector: String
 
-    """分页页码，从1开始，默认是1"""
+    """
+    分页页码，
+    规则: 从1开始，默认是1
+    """
     page: Int
 
-    """每页数量，默认10"""
+    """
+    每页数量，
+    规则: 默认10
+    """
     pageSize: Int
+
+    """
+    关键词: 模糊匹配
+    规则: namespace,name,displayName,contentType,annotations中如果包含该字段则返回
+    """
     keyword: String
 }
 
+"""数据集查询"""
 type DatasetQuery {
     """根据名字获取某个具体的数据集"""
     getDataset(name: String!, namespace: String!): Dataset!
 
     """
-    获取数据集列表，支持通过标签和字段进行选择。
+    获取数据集列表
+    规则: 支持通过标签和字段进行选择。如下:
     labelSelector: aa=bbb
     fieldSelector= metadata.name=somename
     """
     listDatasets(input: ListDatasetInput): PaginatedResult!
 }
 
+"""数据集更新"""
 type DatasetMutation {
+    """创建数据集"""
     createDataset(input: CreateDatasetInput): Dataset!
+    """更新数据集"""
     updateDataset(input: UpdateDatasetInput): Dataset!
 
     """
     删除数据集
-    可以提供一个名称列表，会将所有名字在这个列表的dataset全部删除
-    支持通过标签进行删除，提供一个标签选择器，将满足标签的dataset全部删除
-    如果提供了这两个参数，以名字列表为主。
+    规则: 支持删除一个名称列表中包含的所有数据集
+    规则: 支持通过标签选择器，将满足标签的dataset全部删除
+    规则: 如果提供了这两个参数，以名字列表为主。
     """
     deleteDatasets(input: DeleteDatasetInput): Void
 }
@@ -2615,30 +2701,71 @@ extend type Mutation {
     Dataset: DatasetMutation
 }
 `, BuiltIn: false},
-	{Name: "../schema/datasource.graphqls", Input: `type Endpoint {
+	{Name: "../schema/datasource.graphqls", Input: `"""终端的访问信息"""
+type Endpoint {
+    """url地址"""
     url: String
+    """终端访问的密钥信息，保存在k8s secret中"""
     authSecret: TypedObjectReference
+    """是否通过非安全方式访问，默认为false，即安全模式访问"""
     insecure: Boolean
 }
 
+"""对象存储的使用信息"""
 type Oss {
+    """所用的bucket名称"""
     bucket: String
+    """所用的object路径(可为前缀)"""
     Object: String
 }
 
+"""
+数据源: 定义了对某一个具备数据存储能力服务的访问信息，供后续向该数据源获取数据使用
+"""
 type Datasource {
+    """
+    名称
+    规则: 遵循k8s命名
+    规则: 非空
+    """
     name: String!
+    """
+    命名空间
+    规则: 非空
+    """
     namespace: String!
+
     labels: Map
     annotations: Map
+
+    """
+    创建者，为当前用户的用户名
+    规则: webhook启用后自动添加，默认为空
+    """
     creator: String
-    displayName: String!
+    """展示名"""
+    displayName: String
+    """描述信息"""
     description: String
+
+    """终端访问信息"""
     endpoint: Endpoint
+
+    """
+    对象存储访问信息
+    规则: 非空代表当前数据源为对象存储数据源
+    """
     oss: Oss
-    # 数据源连接状态
+
+    """数据源连接状态"""
     status: String
+
+    """文件数量"""
     fileCount: Int
+
+    """创建时间"""
+    creationTimestamp: Time
+    """更新时间, 这里更新指文件同步，或者数据处理完成后，做的更新操作的时间"""
     updateTimestamp: Time
 }
 
@@ -2659,58 +2786,109 @@ input OssInput {
 
 """新增数据源时输入条件"""
 input CreateDatasourceInput {
-    """数据源资源名称（不可同名）"""
+    """
+    名字
+    规则: k8s的名称规则
+    规则: 非空
+    """
     name: String!
-    """数据源创建命名空间"""
+
+    """
+    数据源的命名空间
+    规则: 非空
+    """
     namespace: String!
+
     """数据源资源标签"""
     labels: Map
     """数据源资源注释"""
     annotations: Map
+
     """数据源资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """数据源资源描述"""
     description: String
+
     """提供对象存储时输入条件"""
     endpointinput: EndpointInput
     ossinput: OssInput
 }
 
+"""更新数据源的输入"""
 input UpdateDatasourceInput {
-    """数据源资源名称（不可同名）"""
+    """
+    name, namespace用来确定资源
+    规则: 不允许修改的。将原数据传递回来即可。
+    """
     name: String!
-    """数据源创建命名空间"""
     namespace: String!
-    """数据源资源标签"""
+
+    """
+    更新的的标签信息，这里涉及到增加或者删除标签，
+    规则: 不允许修改的。将原数据传递回来即可。    
+    如果标签有任何改动，传递完整的label。
+    例如之前的标齐是: abc:def 新增一个标签aa:bb, 那么传递 abc:def, aa:bb
+    """ 
     labels: Map
-    """数据源资源注释"""
     annotations: Map
-    """数据源资源展示名称作为显示，并提供编辑"""
-    displayName: String!
-    """数据源资源描述"""
+
+    """如不更新，则为空"""
+    displayName: String
+    """如不更新，则为空"""
     description: String
 }
 
+"""删除数据源的输入"""
 input DeleteDatasourceInput {
+    """
+    name, namespace用来确定资源
+    """
     name: String
     namespace: String!
-    """筛选器"""
+
+    """标签选择器"""    
     labelSelector: String
+    """字段选择器"""   
     fieldSelector: String
 }
 
-"""分页查询输入"""
+"""数据源分页列表查询的输入"""
 input ListDatasourceInput {
-    """数据源资源名称（不可同名）"""
-    name: String
-    """数据源创建命名空间"""
+    """
+    namespace用来确定资源
+    规则: 必填
+    """
     namespace: String!
-    """数据源资源展示名称"""
+    """name用来唯一确定资源"""
+    name: String
+
+    """展示名"""
     displayName: String
+
+
+
+    """标签选择器"""    
     labelSelector: String
+    """字段选择器"""   
     fieldSelector: String
+
+
+    """
+    分页页码，
+    规则: 从1开始，默认是1
+    """
     page: Int
+
+    """
+    每页数量，
+    规则: 默认10
+    """
     pageSize: Int
+
+    """
+    关键词: 模糊匹配
+    规则: namespace,name,displayName,contentType,annotations中如果包含该字段则返回
+    """
     keyword: String
 }
 
@@ -2739,7 +2917,7 @@ extend type Query{
     labels: Map
     annotations: Map
     creator: String
-    displayName: String!
+    displayName: String
     description: String
     endpoint: Endpoint
     serviceType: String
@@ -2756,7 +2934,7 @@ input CreateEmbedderInput {
     """模型服务资源注释"""
     annotations: Map
     """模型服务资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """模型服务资源描述"""
     description: String
     endpointinput: EndpointInput
@@ -2774,7 +2952,7 @@ input UpdateEmbedderInput {
     """模型服务资源注释"""
     annotations: Map
     """模型服务资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """模型服务资源描述"""
     description: String
 }
@@ -2861,7 +3039,13 @@ union PageNode = Datasource | Model | Embedder | KnowledgeBase | Dataset | Versi
 }
 
 type filedetail{
+    """文件路径"""
     path: String!
+
+    """
+    文件处理的阶段
+    规则: enum { Pending , Processing , Succeeded, Failed, Skipped}
+    """
     phase: String!
 }
 
@@ -2877,7 +3061,7 @@ type KnowledgeBase {
     labels: Map
     annotations: Map
     creator: String
-    displayName: String!
+    displayName: String
     description: String
     embedder: TypedObjectReference
     vectorStore: TypedObjectReference
@@ -2906,7 +3090,7 @@ input CreateKnowledgeBaseInput{
     """知识库资源注释"""
     annotations: Map
     """知识库资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """知识库资源描述"""
     description: String
     """模型服务"""
@@ -2927,7 +3111,7 @@ input UpdateKnowledgeBaseInput {
     """知识库资源注释"""
     annotations: Map
     """知识库资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """知识库资源描述"""
     description: String
 }
@@ -2981,7 +3165,7 @@ extend type Query{
     labels: Map
     annotations: Map
     creator: String
-    displayName: String!
+    displayName: String
     description: String
     modeltypes: String!
     status: String
@@ -2995,7 +3179,7 @@ input CreateModelInput{
     """模型创建命名空间"""
     namespace: String!
     """模型资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """模型资源描述"""
     description: String
     """模型类型"""
@@ -3012,7 +3196,7 @@ input UpdateModelInput {
     """模型资源注释"""
     annotations: Map
     """模型资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """模型资源描述"""
     description: String
 }
@@ -3078,7 +3262,7 @@ type VersionedDataset {
     creator: String
 
     """展示名字， 与metadat.name不一样，这个展示名字是可以用中文的"""
-    displayName: String!
+    displayName: String
 
     """描述"""
     description: String
@@ -3169,7 +3353,7 @@ input CreateVersionedDatasetInput {
     annotations: Map
 
     """展示名称，用于展示在界面上的，必须填写"""
-    displayName: String!
+    displayName: String
     
     """描述信息，可以不写"""
     description: String
@@ -3205,7 +3389,7 @@ input UpdateVersionedDatasetInput {
     """传递方式同label"""
     annotations: Map
     
-    displayName: String!
+    displayName: String
     description: String
 
     """
@@ -6817,14 +7001,11 @@ func (ec *executionContext) _Dataset_displayName(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Dataset_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6840,8 +7021,8 @@ func (ec *executionContext) fieldContext_Dataset_displayName(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Dataset_updateTimestamp(ctx context.Context, field graphql.CollectedField, obj *Dataset) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Dataset_updateTimestamp(ctx, field)
+func (ec *executionContext) _Dataset_description(ctx context.Context, field graphql.CollectedField, obj *Dataset) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Dataset_description(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -6854,7 +7035,7 @@ func (ec *executionContext) _Dataset_updateTimestamp(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.UpdateTimestamp, nil
+		return obj.Description, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6863,19 +7044,19 @@ func (ec *executionContext) _Dataset_updateTimestamp(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*time.Time)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Dataset_updateTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Dataset_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Dataset",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6910,6 +7091,47 @@ func (ec *executionContext) _Dataset_creationTimestamp(ctx context.Context, fiel
 }
 
 func (ec *executionContext) fieldContext_Dataset_creationTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Dataset",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Dataset_updateTimestamp(ctx context.Context, field graphql.CollectedField, obj *Dataset) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Dataset_updateTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdateTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Dataset_updateTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Dataset",
 		Field:      field,
@@ -7125,10 +7347,12 @@ func (ec *executionContext) fieldContext_DatasetMutation_createDataset(ctx conte
 				return ec.fieldContext_Dataset_creator(ctx, field)
 			case "displayName":
 				return ec.fieldContext_Dataset_displayName(ctx, field)
-			case "updateTimestamp":
-				return ec.fieldContext_Dataset_updateTimestamp(ctx, field)
+			case "description":
+				return ec.fieldContext_Dataset_description(ctx, field)
 			case "creationTimestamp":
 				return ec.fieldContext_Dataset_creationTimestamp(ctx, field)
+			case "updateTimestamp":
+				return ec.fieldContext_Dataset_updateTimestamp(ctx, field)
 			case "contentType":
 				return ec.fieldContext_Dataset_contentType(ctx, field)
 			case "field":
@@ -7204,10 +7428,12 @@ func (ec *executionContext) fieldContext_DatasetMutation_updateDataset(ctx conte
 				return ec.fieldContext_Dataset_creator(ctx, field)
 			case "displayName":
 				return ec.fieldContext_Dataset_displayName(ctx, field)
-			case "updateTimestamp":
-				return ec.fieldContext_Dataset_updateTimestamp(ctx, field)
+			case "description":
+				return ec.fieldContext_Dataset_description(ctx, field)
 			case "creationTimestamp":
 				return ec.fieldContext_Dataset_creationTimestamp(ctx, field)
+			case "updateTimestamp":
+				return ec.fieldContext_Dataset_updateTimestamp(ctx, field)
 			case "contentType":
 				return ec.fieldContext_Dataset_contentType(ctx, field)
 			case "field":
@@ -7335,10 +7561,12 @@ func (ec *executionContext) fieldContext_DatasetQuery_getDataset(ctx context.Con
 				return ec.fieldContext_Dataset_creator(ctx, field)
 			case "displayName":
 				return ec.fieldContext_Dataset_displayName(ctx, field)
-			case "updateTimestamp":
-				return ec.fieldContext_Dataset_updateTimestamp(ctx, field)
+			case "description":
+				return ec.fieldContext_Dataset_description(ctx, field)
 			case "creationTimestamp":
 				return ec.fieldContext_Dataset_creationTimestamp(ctx, field)
+			case "updateTimestamp":
+				return ec.fieldContext_Dataset_updateTimestamp(ctx, field)
 			case "contentType":
 				return ec.fieldContext_Dataset_contentType(ctx, field)
 			case "field":
@@ -7662,14 +7890,11 @@ func (ec *executionContext) _Datasource_displayName(ctx context.Context, field g
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Datasource_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -7904,6 +8129,47 @@ func (ec *executionContext) fieldContext_Datasource_fileCount(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Datasource_creationTimestamp(ctx context.Context, field graphql.CollectedField, obj *Datasource) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Datasource_creationTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreationTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Datasource_creationTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Datasource",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Datasource_updateTimestamp(ctx context.Context, field graphql.CollectedField, obj *Datasource) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Datasource_updateTimestamp(ctx, field)
 	if err != nil {
@@ -8006,6 +8272,8 @@ func (ec *executionContext) fieldContext_DatasourceMutation_createDatasource(ctx
 				return ec.fieldContext_Datasource_status(ctx, field)
 			case "fileCount":
 				return ec.fieldContext_Datasource_fileCount(ctx, field)
+			case "creationTimestamp":
+				return ec.fieldContext_Datasource_creationTimestamp(ctx, field)
 			case "updateTimestamp":
 				return ec.fieldContext_Datasource_updateTimestamp(ctx, field)
 			}
@@ -8087,6 +8355,8 @@ func (ec *executionContext) fieldContext_DatasourceMutation_updateDatasource(ctx
 				return ec.fieldContext_Datasource_status(ctx, field)
 			case "fileCount":
 				return ec.fieldContext_Datasource_fileCount(ctx, field)
+			case "creationTimestamp":
+				return ec.fieldContext_Datasource_creationTimestamp(ctx, field)
 			case "updateTimestamp":
 				return ec.fieldContext_Datasource_updateTimestamp(ctx, field)
 			}
@@ -8220,6 +8490,8 @@ func (ec *executionContext) fieldContext_DatasourceQuery_getDatasource(ctx conte
 				return ec.fieldContext_Datasource_status(ctx, field)
 			case "fileCount":
 				return ec.fieldContext_Datasource_fileCount(ctx, field)
+			case "creationTimestamp":
+				return ec.fieldContext_Datasource_creationTimestamp(ctx, field)
 			case "updateTimestamp":
 				return ec.fieldContext_Datasource_updateTimestamp(ctx, field)
 			}
@@ -8539,14 +8811,11 @@ func (ec *executionContext) _Embedder_displayName(ctx context.Context, field gra
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Embedder_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9660,14 +9929,11 @@ func (ec *executionContext) _KnowledgeBase_displayName(ctx context.Context, fiel
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_KnowledgeBase_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -10643,14 +10909,11 @@ func (ec *executionContext) _Model_displayName(ctx context.Context, field graphq
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Model_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -12991,14 +13254,11 @@ func (ec *executionContext) _VersionedDataset_displayName(ctx context.Context, f
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_VersionedDataset_displayName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -16102,7 +16362,7 @@ func (ec *executionContext) unmarshalInputCreateDatasetInput(ctx context.Context
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -16194,7 +16454,7 @@ func (ec *executionContext) unmarshalInputCreateDatasourceInput(ctx context.Cont
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -16286,7 +16546,7 @@ func (ec *executionContext) unmarshalInputCreateEmbedderInput(ctx context.Contex
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -16378,7 +16638,7 @@ func (ec *executionContext) unmarshalInputCreateKnowledgeBaseInput(ctx context.C
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -16461,7 +16721,7 @@ func (ec *executionContext) unmarshalInputCreateModelInput(ctx context.Context, 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -16553,7 +16813,7 @@ func (ec *executionContext) unmarshalInputCreateVersionedDatasetInput(ctx contex
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -17209,22 +17469,13 @@ func (ec *executionContext) unmarshalInputListDatasetInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "namespace", "displayName", "labelSelector", "fieldSelector", "page", "pageSize", "keyword"}
+	fieldsInOrder := [...]string{"namespace", "name", "displayName", "labelSelector", "fieldSelector", "page", "pageSize", "keyword"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
 		case "namespace":
 			var err error
 
@@ -17234,6 +17485,15 @@ func (ec *executionContext) unmarshalInputListDatasetInput(ctx context.Context, 
 				return it, err
 			}
 			it.Namespace = data
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
 		case "displayName":
 			var err error
 
@@ -17301,22 +17561,13 @@ func (ec *executionContext) unmarshalInputListDatasourceInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "namespace", "displayName", "labelSelector", "fieldSelector", "page", "pageSize", "keyword"}
+	fieldsInOrder := [...]string{"namespace", "name", "displayName", "labelSelector", "fieldSelector", "page", "pageSize", "keyword"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "name":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
 		case "namespace":
 			var err error
 
@@ -17326,6 +17577,15 @@ func (ec *executionContext) unmarshalInputListDatasourceInput(ctx context.Contex
 				return it, err
 			}
 			it.Namespace = data
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
 		case "displayName":
 			var err error
 
@@ -17976,7 +18236,7 @@ func (ec *executionContext) unmarshalInputUpdateDatasourceInput(ctx context.Cont
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -18050,7 +18310,7 @@ func (ec *executionContext) unmarshalInputUpdateEmbedderInput(ctx context.Contex
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -18124,7 +18384,7 @@ func (ec *executionContext) unmarshalInputUpdateKnowledgeBaseInput(ctx context.C
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -18198,7 +18458,7 @@ func (ec *executionContext) unmarshalInputUpdateModelInput(ctx context.Context, 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -18272,7 +18532,7 @@ func (ec *executionContext) unmarshalInputUpdateVersionedDatasetInput(ctx contex
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("displayName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -19330,13 +19590,12 @@ func (ec *executionContext) _Dataset(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Dataset_creator(ctx, field, obj)
 		case "displayName":
 			out.Values[i] = ec._Dataset_displayName(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "updateTimestamp":
-			out.Values[i] = ec._Dataset_updateTimestamp(ctx, field, obj)
+		case "description":
+			out.Values[i] = ec._Dataset_description(ctx, field, obj)
 		case "creationTimestamp":
 			out.Values[i] = ec._Dataset_creationTimestamp(ctx, field, obj)
+		case "updateTimestamp":
+			out.Values[i] = ec._Dataset_updateTimestamp(ctx, field, obj)
 		case "contentType":
 			out.Values[i] = ec._Dataset_contentType(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -19677,9 +19936,6 @@ func (ec *executionContext) _Datasource(ctx context.Context, sel ast.SelectionSe
 			out.Values[i] = ec._Datasource_creator(ctx, field, obj)
 		case "displayName":
 			out.Values[i] = ec._Datasource_displayName(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "description":
 			out.Values[i] = ec._Datasource_description(ctx, field, obj)
 		case "endpoint":
@@ -19690,6 +19946,8 @@ func (ec *executionContext) _Datasource(ctx context.Context, sel ast.SelectionSe
 			out.Values[i] = ec._Datasource_status(ctx, field, obj)
 		case "fileCount":
 			out.Values[i] = ec._Datasource_fileCount(ctx, field, obj)
+		case "creationTimestamp":
+			out.Values[i] = ec._Datasource_creationTimestamp(ctx, field, obj)
 		case "updateTimestamp":
 			out.Values[i] = ec._Datasource_updateTimestamp(ctx, field, obj)
 		default:
@@ -19989,9 +20247,6 @@ func (ec *executionContext) _Embedder(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._Embedder_creator(ctx, field, obj)
 		case "displayName":
 			out.Values[i] = ec._Embedder_displayName(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "description":
 			out.Values[i] = ec._Embedder_description(ctx, field, obj)
 		case "endpoint":
@@ -20387,9 +20642,6 @@ func (ec *executionContext) _KnowledgeBase(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._KnowledgeBase_creator(ctx, field, obj)
 		case "displayName":
 			out.Values[i] = ec._KnowledgeBase_displayName(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "description":
 			out.Values[i] = ec._KnowledgeBase_description(ctx, field, obj)
 		case "embedder":
@@ -20703,9 +20955,6 @@ func (ec *executionContext) _Model(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Model_creator(ctx, field, obj)
 		case "displayName":
 			out.Values[i] = ec._Model_displayName(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "description":
 			out.Values[i] = ec._Model_description(ctx, field, obj)
 		case "modeltypes":
@@ -21480,9 +21729,6 @@ func (ec *executionContext) _VersionedDataset(ctx context.Context, sel ast.Selec
 			out.Values[i] = ec._VersionedDataset_creator(ctx, field, obj)
 		case "displayName":
 			out.Values[i] = ec._VersionedDataset_displayName(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "description":
 			out.Values[i] = ec._VersionedDataset_description(ctx, field, obj)
 		case "dataset":

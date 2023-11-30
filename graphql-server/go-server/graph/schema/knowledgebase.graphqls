@@ -4,7 +4,13 @@ type filegroup{
 }
 
 type filedetail{
+    """文件路径"""
     path: String!
+
+    """
+    文件处理的阶段
+    规则: enum { Pending , Processing , Succeeded, Failed, Skipped}
+    """
     phase: String!
 }
 
@@ -20,7 +26,7 @@ type KnowledgeBase {
     labels: Map
     annotations: Map
     creator: String
-    displayName: String!
+    displayName: String
     description: String
     embedder: TypedObjectReference
     vectorStore: TypedObjectReference
@@ -49,7 +55,7 @@ input CreateKnowledgeBaseInput{
     """知识库资源注释"""
     annotations: Map
     """知识库资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """知识库资源描述"""
     description: String
     """模型服务"""
@@ -70,7 +76,7 @@ input UpdateKnowledgeBaseInput {
     """知识库资源注释"""
     annotations: Map
     """知识库资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """知识库资源描述"""
     description: String
 }

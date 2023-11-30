@@ -5,7 +5,7 @@ type Model {
     labels: Map
     annotations: Map
     creator: String
-    displayName: String!
+    displayName: String
     description: String
     modeltypes: String!
     status: String
@@ -19,7 +19,7 @@ input CreateModelInput{
     """模型创建命名空间"""
     namespace: String!
     """模型资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """模型资源描述"""
     description: String
     """模型类型"""
@@ -36,7 +36,7 @@ input UpdateModelInput {
     """模型资源注释"""
     annotations: Map
     """模型资源展示名称作为显示，并提供编辑"""
-    displayName: String!
+    displayName: String
     """模型资源描述"""
     description: String
 }

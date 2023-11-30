@@ -64,7 +64,7 @@ func obj2model(obj *unstructured.Unstructured) *model.Model {
 		Namespace:         obj.GetNamespace(),
 		Labels:            labels,
 		Annotations:       annotations,
-		DisplayName:       displayName,
+		DisplayName:       &displayName,
 		Description:       &description,
 		Status:            &status,
 		Modeltypes:        modeltype,

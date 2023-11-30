@@ -105,7 +105,7 @@ func knowledgebase2model(obj *unstructured.Unstructured) *model.KnowledgeBase {
 			Namespace: &vectorStorenp,
 		},
 		FileGroupDetails:  filegroupdetails,
-		DisplayName:       displayName,
+		DisplayName:       &displayName,
 		Description:       &description,
 		Status:            &status,
 		CreationTimestamp: &creationtimestamp,
@@ -149,6 +149,25 @@ func CreateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespa
 		return nil, err
 	}
 	kb := knowledgebase2model(obj)
+	if kb.FileGroupDetails == nil {
+		// fill in file group without any details
+		details := make([]*model.Filegroupdetail, len(filegroups))
+		for index, fg := range filegroups {
+			fgDetail := &model.Filegroupdetail{
+				Source: (*model.TypedObjectReference)(fg.Source),
+			}
+			fileDetails := make([]*model.Filedetail, len(fg.Paths))
+			for findex, path := range fg.Paths {
+				fileDetails[findex] = &model.Filedetail{
+					Path:  path,
+					Phase: "",
+				}
+			}
+			fgDetail.Filedetails = fileDetails
+			details[index] = fgDetail
+		}
+		kb.FileGroupDetails = details
+	}
 	return kb, nil
 }
 

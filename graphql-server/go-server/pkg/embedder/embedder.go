@@ -69,7 +69,7 @@ func embedder2model(obj *unstructured.Unstructured) *model.Embedder {
 		Namespace:       obj.GetNamespace(),
 		Labels:          labels,
 		Annotations:     annotations,
-		DisplayName:     displayName,
+		DisplayName:     &displayName,
 		Endpoint:        &endpoint,
 		ServiceType:     &servicetype,
 		UpdateTimestamp: &updateTime,
