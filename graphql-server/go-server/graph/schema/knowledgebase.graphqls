@@ -23,6 +23,22 @@ type filedetail{
     path: String!
 
     """
+    文件类型
+    规则: enum { QA }
+    """
+    type: String!
+
+    """
+    文件中的数据条目总数
+    """
+    count: String!
+    
+    """
+    文件大小
+    """
+    size: String!
+
+    """
     文件处理的阶段
     规则: enum { Pending , Processing , Succeeded, Failed, Skipped}
     """
@@ -74,7 +90,7 @@ type KnowledgeBase {
     annotations: Map
     
 
-  """
+    """
     创建者，为当前用户的用户名
     规则: webhook启用后自动添加，默认为空
     """

@@ -125,6 +125,7 @@ type CreateKnowledgeBaseInput struct {
 	FileGroups []*Filegroupinput `json:"fileGroups,omitempty"`
 }
 
+// 创建模型的输入
 type CreateModelInput struct {
 	// 模型资源名称（不可同名）
 	Name string `json:"name"`
@@ -135,6 +136,8 @@ type CreateModelInput struct {
 	// 模型资源描述
 	Description *string `json:"description,omitempty"`
 	// 模型类型
+	// 规则: 目前支持 llm和embedding两种模型类型
+	// 规则: 如果该模型支持多种模型类型，则可多选。多选后组成的字段通过逗号隔开。如 "llm,embedding"
 	Modeltypes string `json:"modeltypes"`
 }
 
@@ -430,6 +433,7 @@ type DeleteKnowledgeBaseInput struct {
 	FieldSelector *string `json:"fieldSelector,omitempty"`
 }
 
+// 模型删除的输入
 type DeleteModelInput struct {
 	Name      *string `json:"name,omitempty"`
 	Namespace string  `json:"namespace"`
@@ -659,6 +663,7 @@ type ListKnowledgeBaseInput struct {
 	Keyword *string `json:"keyword,omitempty"`
 }
 
+// 模型分页列表查询的输入
 type ListModelInput struct {
 	Name        *string `json:"name,omitempty"`
 	Namespace   string  `json:"namespace"`
@@ -667,9 +672,15 @@ type ListModelInput struct {
 	LabelSelector *string `json:"labelSelector,omitempty"`
 	// 字段选择器
 	FieldSelector *string `json:"fieldSelector,omitempty"`
-	Page          *int    `json:"page,omitempty"`
-	PageSize      *int    `json:"pageSize,omitempty"`
-	Keyword       *string `json:"keyword,omitempty"`
+	// 分页页码，
+	// 规则: 从1开始，默认是1
+	Page *int `json:"page,omitempty"`
+	// 每页数量，
+	// 规则: 默认10
+	PageSize *int `json:"pageSize,omitempty"`
+	// 关键词: 模糊匹配
+	// 规则: name,displayName中如果包含该字段则返回
+	Keyword *string `json:"keyword,omitempty"`
 }
 
 type ListVersionedDatasetInput struct {
@@ -685,19 +696,38 @@ type ListVersionedDatasetInput struct {
 	Keyword  *string `json:"keyword,omitempty"`
 }
 
+// 模型
 type Model struct {
-	ID                *string                `json:"id,omitempty"`
-	Name              string                 `json:"name"`
-	Namespace         string                 `json:"namespace"`
-	Labels            map[string]interface{} `json:"labels,omitempty"`
-	Annotations       map[string]interface{} `json:"annotations,omitempty"`
-	Creator           *string                `json:"creator,omitempty"`
-	DisplayName       *string                `json:"displayName,omitempty"`
-	Description       *string                `json:"description,omitempty"`
-	Modeltypes        string                 `json:"modeltypes"`
-	Status            *string                `json:"status,omitempty"`
-	CreationTimestamp *time.Time             `json:"creationTimestamp,omitempty"`
-	UpdateTimestamp   *time.Time             `json:"updateTimestamp,omitempty"`
+	// 模型id,为CR资源中的metadata.uid
+	ID *string `json:"id,omitempty"`
+	// 名称
+	// 规则: 遵循k8s命名
+	Name string `json:"name"`
+	// 所在的namespace(文件上传时作为bucket)
+	// 规则: 获取当前项目对应的命名空间
+	// 规则: 非空
+	Namespace string `json:"namespace"`
+	// 一些用于标记，选择的的标签
+	Labels map[string]interface{} `json:"labels,omitempty"`
+	// 添加一些辅助性记录信息
+	Annotations map[string]interface{} `json:"annotations,omitempty"`
+	// 创建者，为当前用户的用户名
+	// 规则: webhook启用后自动添加，默认为空
+	Creator *string `json:"creator,omitempty"`
+	// 展示名
+	DisplayName *string `json:"displayName,omitempty"`
+	// 描述信息
+	Description *string `json:"description,omitempty"`
+	// 创建时间
+	CreationTimestamp *time.Time `json:"creationTimestamp,omitempty"`
+	// 更新时间
+	UpdateTimestamp *time.Time `json:"updateTimestamp,omitempty"`
+	// 模型类型
+	// 规则: 目前支持 llm和embedding两种模型类型
+	// 规则: 如果该模型支持多种模型类型，则可多选。多选后组成的字段通过逗号隔开。如 "llm,embedding"
+	Modeltypes string `json:"modeltypes"`
+	// 状态
+	Status *string `json:"status,omitempty"`
 }
 
 func (Model) IsPageNode() {}
@@ -822,6 +852,7 @@ type UpdateKnowledgeBaseInput struct {
 	Description *string `json:"description,omitempty"`
 }
 
+// 模型更新的输入
 type UpdateModelInput struct {
 	// 模型资源名称（不可同名）
 	Name string `json:"name"`
@@ -912,6 +943,13 @@ type VersionedDatasetQuery struct {
 type Filedetail struct {
 	// 文件路径
 	Path string `json:"path"`
+	// 文件类型
+	// 规则: enum { QA }
+	Type string `json:"type"`
+	// 文件中的数据条目总数
+	Count string `json:"count"`
+	// 文件大小
+	Size string `json:"size"`
 	// 文件处理的阶段
 	// 规则: enum { Pending , Processing , Succeeded, Failed, Skipped}
 	Phase string `json:"phase"`

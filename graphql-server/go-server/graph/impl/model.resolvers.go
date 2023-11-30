@@ -6,7 +6,6 @@ package impl
 
 import (
 	"context"
-	"strings"
 
 	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
 	"github.com/kubeagi/arcadia/graphql-server/go-server/pkg/auth"
@@ -92,47 +91,8 @@ func (r *modelQueryResolver) ListModels(ctx context.Context, obj *generated.Mode
 	if err != nil {
 		return nil, err
 	}
-	name, displayName, labelSelector, fieldSelector := "", "", "", ""
-	page, pageSize := 1, 10
-	if input.Name != nil {
-		name = *input.Name
-	}
-	if input.DisplayName != nil {
-		displayName = *input.DisplayName
-	}
-	if input.FieldSelector != nil {
-		fieldSelector = *input.FieldSelector
-	}
-	if input.LabelSelector != nil {
-		labelSelector = *input.LabelSelector
-	}
-	if input.Page != nil && *input.Page > 0 {
-		page = *input.Page
-	}
-	if input.PageSize != nil && *input.PageSize > 0 {
-		pageSize = *input.PageSize
-	}
-	result, err := md.ListModels(ctx, c, input.Namespace, labelSelector, fieldSelector)
-	if err != nil {
-		return nil, err
-	}
-	var filteredResult []generated.PageNode
-	for idx, u := range result {
-		if (name == "" || strings.Contains(u.Name, name)) && (displayName == "" || strings.Contains(*u.DisplayName, displayName)) {
-			filteredResult = append(filteredResult, result[idx])
-		}
-	}
 
-	totalCount := len(filteredResult)
-	end := page * pageSize
-	if end > totalCount {
-		end = totalCount
-	}
-	return &generated.PaginatedResult{
-		TotalCount:  totalCount,
-		HasNextPage: end < totalCount,
-		Nodes:       filteredResult[(page-1)*pageSize : end],
-	}, nil
+	return md.ListModels(ctx, c, input)
 }
 
 // Model is the resolver for the Model field.

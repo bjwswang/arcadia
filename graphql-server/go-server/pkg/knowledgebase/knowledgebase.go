@@ -30,10 +30,9 @@ import (
 
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
 	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
-	model "github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
 )
 
-func knowledgebase2model(obj *unstructured.Unstructured) *model.KnowledgeBase {
+func knowledgebase2model(obj *unstructured.Unstructured) *generated.KnowledgeBase {
 	labels := make(map[string]interface{})
 	for k, v := range obj.GetLabels() {
 		labels[k] = v
@@ -52,20 +51,23 @@ func knowledgebase2model(obj *unstructured.Unstructured) *model.KnowledgeBase {
 	vectorStorenp := vectorStore["namespace"].(string)
 	apiversion := obj.GetAPIVersion()
 	fileGroupDetails, _, _ := unstructured.NestedSlice(obj.Object, "status", "fileGroupDetail")
-	var filegroupdetails []*model.Filegroupdetail
+	var filegroupdetails []*generated.Filegroupdetail
 	for _, filegroupdetail := range fileGroupDetails {
 		fileDetails := filegroupdetail.(map[string]interface{})["fileDetails"].([]interface{})
-		var filedetails []*model.Filedetail
+		var filedetails []*generated.Filedetail
 		fns := filegroupdetail.(map[string]interface{})["source"].(map[string]interface{})["namespace"].(string)
 		for _, filedetailsmap := range fileDetails {
-			filedetail := &model.Filedetail{
+			filedetail := &generated.Filedetail{
+				Type:  filedetailsmap.(map[string]interface{})["type"].(string),
+				Count: filedetailsmap.(map[string]interface{})["count"].(string),
+				Size:  filedetailsmap.(map[string]interface{})["size"].(string),
 				Path:  filedetailsmap.(map[string]interface{})["path"].(string),
 				Phase: filedetailsmap.(map[string]interface{})["phase"].(string),
 			}
 			filedetails = append(filedetails, filedetail)
 		}
-		filegroupdetail := &model.Filegroupdetail{
-			Source: &model.TypedObjectReference{
+		filegroupdetail := &generated.Filegroupdetail{
+			Source: &generated.TypedObjectReference{
 				Kind:      filegroupdetail.(map[string]interface{})["source"].(map[string]interface{})["kind"].(string),
 				Name:      filegroupdetail.(map[string]interface{})["source"].(map[string]interface{})["name"].(string),
 				Namespace: &fns,
@@ -88,19 +90,19 @@ func knowledgebase2model(obj *unstructured.Unstructured) *model.KnowledgeBase {
 		status = "unknow"
 	}
 
-	md := model.KnowledgeBase{
+	md := generated.KnowledgeBase{
 		ID:          &id,
 		Name:        obj.GetName(),
 		Namespace:   obj.GetNamespace(),
 		Labels:      labels,
 		Annotations: annotations,
-		Embedder: &model.TypedObjectReference{
+		Embedder: &generated.TypedObjectReference{
 			APIGroup:  &apiversion,
 			Kind:      embedder["kind"].(string),
 			Name:      embedder["name"].(string),
 			Namespace: &embeddernp,
 		},
-		VectorStore: &model.TypedObjectReference{
+		VectorStore: &generated.TypedObjectReference{
 			APIGroup:  &apiversion,
 			Kind:      vectorStore["kind"].(string),
 			Name:      vectorStore["name"].(string),
@@ -116,7 +118,7 @@ func knowledgebase2model(obj *unstructured.Unstructured) *model.KnowledgeBase {
 	return &md
 }
 
-func CreateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace, displayname, discription, embedder string, vectorstore v1alpha1.TypedObjectReference, filegroups []v1alpha1.FileGroup) (*model.KnowledgeBase, error) {
+func CreateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace, displayname, discription, embedder string, vectorstore v1alpha1.TypedObjectReference, filegroups []v1alpha1.FileGroup) (*generated.KnowledgeBase, error) {
 	knowledgebase := v1alpha1.KnowledgeBase{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -153,14 +155,14 @@ func CreateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespa
 	kb := knowledgebase2model(obj)
 	if kb.FileGroupDetails == nil {
 		// fill in file group without any details
-		details := make([]*model.Filegroupdetail, len(filegroups))
+		details := make([]*generated.Filegroupdetail, len(filegroups))
 		for index, fg := range filegroups {
-			fgDetail := &model.Filegroupdetail{
-				Source: (*model.TypedObjectReference)(fg.Source),
+			fgDetail := &generated.Filegroupdetail{
+				Source: (*generated.TypedObjectReference)(fg.Source),
 			}
-			fileDetails := make([]*model.Filedetail, len(fg.Paths))
+			fileDetails := make([]*generated.Filedetail, len(fg.Paths))
 			for findex, path := range fg.Paths {
-				fileDetails[findex] = &model.Filedetail{
+				fileDetails[findex] = &generated.Filedetail{
 					Path:  path,
 					Phase: "",
 				}
@@ -173,7 +175,7 @@ func CreateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespa
 	return kb, nil
 }
 
-func UpdateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace, displayname string) (*model.KnowledgeBase, error) {
+func UpdateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace, displayname string) (*generated.KnowledgeBase, error) {
 	resource := c.Resource(schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "knowledgebases"})
 	obj, err := resource.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -208,7 +210,7 @@ func DeleteKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespa
 	return nil, nil
 }
 
-func ReadKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace string) (*model.KnowledgeBase, error) {
+func ReadKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace string) (*generated.KnowledgeBase, error) {
 	resource := c.Resource(schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "knowledgebases"})
 	u, err := resource.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -250,7 +252,7 @@ func ListKnowledgeBases(ctx context.Context, c dynamic.Interface, input generate
 	sort.Slice(us.Items, func(i, j int) bool {
 		return us.Items[i].GetCreationTimestamp().After(us.Items[j].GetCreationTimestamp().Time)
 	})
-	result := make([]*model.KnowledgeBase, len(us.Items))
+	result := make([]*generated.KnowledgeBase, len(us.Items))
 	for idx, u := range us.Items {
 		result[idx] = knowledgebase2model(&u)
 	}

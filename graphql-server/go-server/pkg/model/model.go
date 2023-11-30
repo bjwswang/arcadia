@@ -18,6 +18,7 @@ package model
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,10 +28,10 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
-	model "github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
+	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
 )
 
-func obj2model(obj *unstructured.Unstructured) *model.Model {
+func obj2model(obj *unstructured.Unstructured) *generated.Model {
 	labels := make(map[string]interface{})
 	for k, v := range obj.GetLabels() {
 		labels[k] = v
@@ -58,7 +59,7 @@ func obj2model(obj *unstructured.Unstructured) *model.Model {
 	} else {
 		status = "unknow"
 	}
-	md := model.Model{
+	md := generated.Model{
 		ID:                &id,
 		Name:              obj.GetName(),
 		Namespace:         obj.GetNamespace(),
@@ -74,7 +75,7 @@ func obj2model(obj *unstructured.Unstructured) *model.Model {
 	return &md
 }
 
-func CreateModel(ctx context.Context, c dynamic.Interface, name, namespace, displayName, description, modeltypes string) (*model.Model, error) {
+func CreateModel(ctx context.Context, c dynamic.Interface, name, namespace, displayName, description, modeltypes string) (*generated.Model, error) {
 	model := v1alpha1.Model{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -103,7 +104,7 @@ func CreateModel(ctx context.Context, c dynamic.Interface, name, namespace, disp
 	return md, nil
 }
 
-func UpdateModel(ctx context.Context, c dynamic.Interface, name, namespace, displayname string) (*model.Model, error) {
+func UpdateModel(ctx context.Context, c dynamic.Interface, name, namespace, displayname string) (*generated.Model, error) {
 	resource := c.Resource(schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "models"})
 	obj, err := resource.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -138,24 +139,62 @@ func DeleteModel(ctx context.Context, c dynamic.Interface, name, namespace, labe
 	return nil, nil
 }
 
-func ListModels(ctx context.Context, c dynamic.Interface, namespace, labelSelector, fieldSelector string) ([]*model.Model, error) {
+func ListModels(ctx context.Context, c dynamic.Interface, input generated.ListModelInput) (*generated.PaginatedResult, error) {
+	name, displayName, labelSelector, fieldSelector := "", "", "", ""
+	page, pageSize := 1, 10
+	if input.Name != nil {
+		name = *input.Name
+	}
+	if input.DisplayName != nil {
+		displayName = *input.DisplayName
+	}
+	if input.FieldSelector != nil {
+		fieldSelector = *input.FieldSelector
+	}
+	if input.LabelSelector != nil {
+		labelSelector = *input.LabelSelector
+	}
+	if input.Page != nil && *input.Page > 0 {
+		page = *input.Page
+	}
+	if input.PageSize != nil && *input.PageSize > 0 {
+		pageSize = *input.PageSize
+	}
+
 	dsSchema := schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "models"}
 	listOptions := metav1.ListOptions{
 		LabelSelector: labelSelector,
 		FieldSelector: fieldSelector,
 	}
-	us, err := c.Resource(dsSchema).Namespace(namespace).List(ctx, listOptions)
+	us, err := c.Resource(dsSchema).Namespace(input.Namespace).List(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*model.Model, len(us.Items))
+	result := make([]*generated.Model, len(us.Items))
 	for idx, u := range us.Items {
 		result[idx] = obj2model(&u)
 	}
-	return result, nil
+
+	var filteredResult []generated.PageNode
+	for idx, u := range result {
+		if (name == "" || strings.Contains(u.Name, name)) && (displayName == "" || strings.Contains(*u.DisplayName, displayName)) {
+			filteredResult = append(filteredResult, result[idx])
+		}
+	}
+
+	totalCount := len(filteredResult)
+	end := page * pageSize
+	if end > totalCount {
+		end = totalCount
+	}
+	return &generated.PaginatedResult{
+		TotalCount:  totalCount,
+		HasNextPage: end < totalCount,
+		Nodes:       filteredResult[(page-1)*pageSize : end],
+	}, nil
 }
 
-func ReadModel(ctx context.Context, c dynamic.Interface, name, namespace string) (*model.Model, error) {
+func ReadModel(ctx context.Context, c dynamic.Interface, name, namespace string) (*generated.Model, error) {
 	resource := c.Resource(schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "models"})
 	u, err := resource.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {

@@ -24,7 +24,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,7 +31,6 @@ import (
 
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
 	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
-	model "github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
 )
 
 var dsSchema = schema.GroupVersionResource{
@@ -41,7 +39,7 @@ var dsSchema = schema.GroupVersionResource{
 	Resource: "datasources",
 }
 
-func datasource2model(obj *unstructured.Unstructured) *model.Datasource {
+func datasource2model(obj *unstructured.Unstructured) *generated.Datasource {
 	labels := make(map[string]interface{})
 	for k, v := range obj.GetLabels() {
 		labels[k] = v
@@ -68,19 +66,19 @@ func datasource2model(obj *unstructured.Unstructured) *model.Datasource {
 			status, _ = condition["status"].(string)
 		}
 	}
-	endpoint := model.Endpoint{
+	endpoint := generated.Endpoint{
 		URL: &url,
-		AuthSecret: &model.TypedObjectReference{
+		AuthSecret: &generated.TypedObjectReference{
 			Kind:      "Secret",
 			Name:      authsecret,
 			Namespace: &authsecretNamespace,
 		},
 		Insecure: &insecure,
 	}
-	oss := model.Oss{
+	oss := generated.Oss{
 		Bucket: &bucket,
 	}
-	md := model.Datasource{
+	md := generated.Datasource{
 		Name:            obj.GetName(),
 		Namespace:       obj.GetNamespace(),
 		Labels:          labels,
@@ -95,7 +93,7 @@ func datasource2model(obj *unstructured.Unstructured) *model.Datasource {
 	return &md
 }
 
-func CreateDatasource(ctx context.Context, c dynamic.Interface, name, namespace, url, authsecret, bucket, displayname, description string, insecure bool) (*model.Datasource, error) {
+func CreateDatasource(ctx context.Context, c dynamic.Interface, name, namespace, url, authsecret, bucket, displayname, description string, insecure bool) (*generated.Datasource, error) {
 	var datasource v1alpha1.Datasource
 	if url != "" {
 		datasource = v1alpha1.Datasource{
@@ -158,7 +156,7 @@ func CreateDatasource(ctx context.Context, c dynamic.Interface, name, namespace,
 	return ds, nil
 }
 
-func UpdateDatasource(ctx context.Context, c dynamic.Interface, name, namespace, displayname string) (*model.Datasource, error) {
+func UpdateDatasource(ctx context.Context, c dynamic.Interface, name, namespace, displayname string) (*generated.Datasource, error) {
 	resource := c.Resource(schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "datasources"})
 	obj, err := resource.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -193,7 +191,7 @@ func DeleteDatasource(ctx context.Context, c dynamic.Interface, name, namespace,
 	return nil, nil
 }
 func ListDatasources(ctx context.Context, c dynamic.Interface, input *generated.ListDatasourceInput) (*generated.PaginatedResult, error) {
-	listOptions := v1.ListOptions{}
+	listOptions := metav1.ListOptions{}
 	if input.Name != nil {
 		listOptions.FieldSelector = fmt.Sprintf("metadata.name=%s", *input.Name)
 	} else {
@@ -267,7 +265,7 @@ func ListDatasources(ctx context.Context, c dynamic.Interface, input *generated.
 	}, nil
 }
 
-func ReadDatasource(ctx context.Context, c dynamic.Interface, name, namespace string) (*model.Datasource, error) {
+func ReadDatasource(ctx context.Context, c dynamic.Interface, name, namespace string) (*generated.Datasource, error) {
 	resource := c.Resource(schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "datasources"})
 	u, err := resource.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
