@@ -18,6 +18,7 @@ package config
 import (
 	"flag"
 
+	"github.com/kubeagi/arcadia/graphql-server/go-server/pkg/dataprocessing"
 	"k8s.io/klog/v2"
 )
 
@@ -48,5 +49,7 @@ func NewServerFlags() ServerConfig {
 
 	klog.InitFlags(nil)
 	flag.Parse()
+
+	dataprocessing.Init(s.DataProcessURL)
 	return s
 }
