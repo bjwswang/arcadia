@@ -57,12 +57,21 @@ func knowledgebase2model(obj *unstructured.Unstructured) *generated.KnowledgeBas
 		var filedetails []*generated.Filedetail
 		fns := filegroupdetail.(map[string]interface{})["source"].(map[string]interface{})["namespace"].(string)
 		for _, filedetailsmap := range fileDetails {
+			detail, ok := filedetailsmap.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			fileType, _ := detail["type"].(string)
+			count, _ := detail["count"].(string)
+			size, _ := detail["size"].(string)
+			path, _ := detail["path"].(string)
+			phase, _ := detail["phase"].(string)
 			filedetail := &generated.Filedetail{
-				Type:  filedetailsmap.(map[string]interface{})["type"].(string),
-				Count: filedetailsmap.(map[string]interface{})["count"].(string),
-				Size:  filedetailsmap.(map[string]interface{})["size"].(string),
-				Path:  filedetailsmap.(map[string]interface{})["path"].(string),
-				Phase: filedetailsmap.(map[string]interface{})["phase"].(string),
+				Type:  fileType,
+				Count: count,
+				Size:  size,
+				Path:  path,
+				Phase: phase,
 			}
 			filedetails = append(filedetails, filedetail)
 		}
