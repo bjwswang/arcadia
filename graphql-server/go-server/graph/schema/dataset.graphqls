@@ -15,13 +15,13 @@ Dataset
 """
 type Dataset {
     """
-    数据集名称
+    名称
     规则: 遵循k8s命名
     """
     name: String!
 
     """
-    数据集所在的namespace(文件上传时作为bucket)
+    所在的namespace(文件上传时作为bucket)
     规则: 获取当前项目对应的命名空间
     规则: 非空
     """

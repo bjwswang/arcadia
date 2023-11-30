@@ -47,6 +47,8 @@ var (
 
 func versionedDataset2model(obj *unstructured.Unstructured) (*generated.VersionedDataset, error) {
 	vds := &generated.VersionedDataset{}
+	id := string(obj.GetUID())
+	vds.ID = &id
 	vds.Name = obj.GetName()
 	vds.Namespace = obj.GetNamespace()
 	if r := obj.GetLabels(); len(r) > 0 {

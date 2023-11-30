@@ -362,6 +362,7 @@ type ComplexityRoot struct {
 		Description       func(childComplexity int) int
 		DisplayName       func(childComplexity int) int
 		Files             func(childComplexity int, input *FileFilter) int
+		ID                func(childComplexity int) int
 		Labels            func(childComplexity int) int
 		Name              func(childComplexity int) int
 		Namespace         func(childComplexity int) int
@@ -1994,6 +1995,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.VersionedDataset.Files(childComplexity, args["input"].(*FileFilter)), true
 
+	case "VersionedDataset.id":
+		if e.complexity.VersionedDataset.ID == nil {
+			break
+		}
+
+		return e.complexity.VersionedDataset.ID(childComplexity), true
+
 	case "VersionedDataset.labels":
 		if e.complexity.VersionedDataset.Labels == nil {
 			break
@@ -2493,13 +2501,13 @@ Dataset
 """
 type Dataset {
     """
-    数据集名称
+    名称
     规则: 遵循k8s命名
     """
     name: String!
 
     """
-    数据集所在的namespace(文件上传时作为bucket)
+    所在的namespace(文件上传时作为bucket)
     规则: 获取当前项目对应的命名空间
     规则: 非空
     """
@@ -3033,11 +3041,26 @@ type TypedObjectReference {
 
 union PageNode = Datasource | Model | Embedder | KnowledgeBase | Dataset | VersionedDataset | F
 `, BuiltIn: false},
-	{Name: "../schema/knowledgebase.graphqls", Input: `type filegroup{
+	{Name: "../schema/knowledgebase.graphqls", Input: `"""
+文件组
+规则: 属于同一个源(数据集)的文件要放在同一个filegroup中
+规则: path直接读取文件里表中的文件路径即可
+"""
+type filegroup{
+    """
+    源；目前仅支持版本数据集，即 Kind为 VersionedDataset
+    """
     source: TypedObjectReference
+    """
+    路径数组
+    """
     path: [String!]
 }
 
+"""
+文件详情
+描述: 文件在知识库中的详细状态
+"""
 type filedetail{
     """文件路径"""
     path: String!
@@ -3049,27 +3072,83 @@ type filedetail{
     phase: String!
 }
 
+"""
+文件组详情
+描述: 文件组在知识库中的状态
+"""
 type filegroupdetail{
+    """
+    源；目前仅支持版本数据集，即 Kind为 VersionedDataset
+    """
     source: TypedObjectReference
+
+    """
+    文件详情
+    规则；数组。具体文件详情参考 filedetail描述
+    """
     filedetails:[filedetail]
 }
 
+"""
+知识库
+"""
 type KnowledgeBase {
+    """
+    知识库id,为CR资源中的metadata.uid
+    """
     id: String
+
+    """
+    名称
+    规则: 遵循k8s命名
+    """
     name: String!
+
+    """
+    所在的namespace(文件上传时作为bucket)
+    规则: 获取当前项目对应的命名空间
+    规则: 非空
+    """
     namespace: String!
+
+    """一些用于标记，选择的的标签"""
     labels: Map
+    """添加一些辅助性记录信息"""
     annotations: Map
+    
+
+  """
+    创建者，为当前用户的用户名
+    规则: webhook启用后自动添加，默认为空
+    """
     creator: String
+
+    """展示名"""
     displayName: String
+
+    """描述信息"""
     description: String
-    embedder: TypedObjectReference
-    vectorStore: TypedObjectReference
-    fileGroupDetails: [filegroupdetail]
-    """知识库连接状态"""
-    status: String
+
+    """创建时间"""
     creationTimestamp: Time
+    """更新时间"""
     updateTimestamp: Time
+    
+    """
+    embedder指当前知识库使用的embedding向量化模型，即 Kind 为 Embedder
+    """
+    embedder: TypedObjectReference
+    """
+    vectorStore指当前知识库使用的向量数据库服务，即 Kind 为 VectorStore
+    """
+    vectorStore: TypedObjectReference
+    """
+    fileGroupDetails为知识库中所处理的文件组的详细内容和状态
+    """
+    fileGroupDetails: [filegroupdetail]
+    
+    """知识库整体连接状态"""
+    status: String
 }
 
 """源文件输入"""
@@ -3080,27 +3159,35 @@ input filegroupinput {
     path: [String!]
 }
 
+"""创建知识库的输入"""
 input CreateKnowledgeBaseInput{
     """知识库资源名称（不可同名）"""
     name: String!
     """知识库创建命名空间"""
     namespace: String!
+
     """知识库资源标签"""
     labels: Map
     """知识库资源注释"""
     annotations: Map
+
     """知识库资源展示名称作为显示，并提供编辑"""
     displayName: String
     """知识库资源描述"""
     description: String
-    """模型服务"""
+
+     """
+    embedder指当前知识库使用的embedding向量化模型
+    """
     embedder: String!
-    """"向量数据库(使用默认值)"""
+
+    """"向量数据库(目前不需要填写，直接使用系统默认的向量数据库)"""
     vectorStore: TypedObjectReferenceInput
     """知识库文件"""
     fileGroups: [filegroupinput!]
 }
 
+"""知识库更新的输入"""
 input UpdateKnowledgeBaseInput {
     """知识库资源名称（不可同名）"""
     name: String!
@@ -3110,31 +3197,52 @@ input UpdateKnowledgeBaseInput {
     labels: Map
     """知识库资源注释"""
     annotations: Map
-    """知识库资源展示名称作为显示，并提供编辑"""
+
+    """如不更新，则为空"""
     displayName: String
-    """知识库资源描述"""
+
+    """如不更新，则为空"""
     description: String
 }
 
+"""知识库删除的输入"""
 input DeleteKnowledgeBaseInput {
     name: String
     namespace: String!
+
     """标签选择器"""
     labelSelector: String
     """字段选择器"""
     fieldSelector: String
 }
 
+"""知识库分页列表查询的输入"""
 input ListKnowledgeBaseInput {
     name: String
     namespace: String!
+
     displayName: String
     """标签选择器"""
     labelSelector: String
     """字段选择器"""
     fieldSelector: String
+
+    """
+    分页页码，
+    规则: 从1开始，默认是1
+    """
     page: Int
+
+    """
+    每页数量，
+    规则: 默认10
+    """
     pageSize: Int
+
+    """
+    关键词: 模糊匹配
+    规则: name,displayName中如果包含该字段则返回
+    """
     keyword: String
 }
 
@@ -3246,6 +3354,11 @@ VersionedDataset
 主要记录版本名字，数据的来源，以及文件的同步状态
 """
 type VersionedDataset {
+    """
+    版本数据集id,为CR资源中的metadata.uid
+    """
+    id: String
+
     """数据集名称, 这个应该是前端随机生成就可以，没有实际用途"""
     name: String!
 
@@ -9990,6 +10103,88 @@ func (ec *executionContext) fieldContext_KnowledgeBase_description(ctx context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _KnowledgeBase_creationTimestamp(ctx context.Context, field graphql.CollectedField, obj *KnowledgeBase) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreationTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_KnowledgeBase_creationTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "KnowledgeBase",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _KnowledgeBase_updateTimestamp(ctx context.Context, field graphql.CollectedField, obj *KnowledgeBase) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdateTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_KnowledgeBase_updateTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "KnowledgeBase",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _KnowledgeBase_embedder(ctx context.Context, field graphql.CollectedField, obj *KnowledgeBase) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_KnowledgeBase_embedder(ctx, field)
 	if err != nil {
@@ -10180,88 +10375,6 @@ func (ec *executionContext) fieldContext_KnowledgeBase_status(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _KnowledgeBase_creationTimestamp(ctx context.Context, field graphql.CollectedField, obj *KnowledgeBase) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CreationTimestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*time.Time)
-	fc.Result = res
-	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_KnowledgeBase_creationTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "KnowledgeBase",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _KnowledgeBase_updateTimestamp(ctx context.Context, field graphql.CollectedField, obj *KnowledgeBase) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.UpdateTimestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*time.Time)
-	fc.Result = res
-	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_KnowledgeBase_updateTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "KnowledgeBase",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _KnowledgeBaseMutation_createKnowledgeBase(ctx context.Context, field graphql.CollectedField, obj *KnowledgeBaseMutation) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_KnowledgeBaseMutation_createKnowledgeBase(ctx, field)
 	if err != nil {
@@ -10317,6 +10430,10 @@ func (ec *executionContext) fieldContext_KnowledgeBaseMutation_createKnowledgeBa
 				return ec.fieldContext_KnowledgeBase_displayName(ctx, field)
 			case "description":
 				return ec.fieldContext_KnowledgeBase_description(ctx, field)
+			case "creationTimestamp":
+				return ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
+			case "updateTimestamp":
+				return ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
 			case "embedder":
 				return ec.fieldContext_KnowledgeBase_embedder(ctx, field)
 			case "vectorStore":
@@ -10325,10 +10442,6 @@ func (ec *executionContext) fieldContext_KnowledgeBaseMutation_createKnowledgeBa
 				return ec.fieldContext_KnowledgeBase_fileGroupDetails(ctx, field)
 			case "status":
 				return ec.fieldContext_KnowledgeBase_status(ctx, field)
-			case "creationTimestamp":
-				return ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
-			case "updateTimestamp":
-				return ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type KnowledgeBase", field.Name)
 		},
@@ -10402,6 +10515,10 @@ func (ec *executionContext) fieldContext_KnowledgeBaseMutation_updateKnowledgeBa
 				return ec.fieldContext_KnowledgeBase_displayName(ctx, field)
 			case "description":
 				return ec.fieldContext_KnowledgeBase_description(ctx, field)
+			case "creationTimestamp":
+				return ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
+			case "updateTimestamp":
+				return ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
 			case "embedder":
 				return ec.fieldContext_KnowledgeBase_embedder(ctx, field)
 			case "vectorStore":
@@ -10410,10 +10527,6 @@ func (ec *executionContext) fieldContext_KnowledgeBaseMutation_updateKnowledgeBa
 				return ec.fieldContext_KnowledgeBase_fileGroupDetails(ctx, field)
 			case "status":
 				return ec.fieldContext_KnowledgeBase_status(ctx, field)
-			case "creationTimestamp":
-				return ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
-			case "updateTimestamp":
-				return ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type KnowledgeBase", field.Name)
 		},
@@ -10539,6 +10652,10 @@ func (ec *executionContext) fieldContext_KnowledgeBaseQuery_getKnowledgeBase(ctx
 				return ec.fieldContext_KnowledgeBase_displayName(ctx, field)
 			case "description":
 				return ec.fieldContext_KnowledgeBase_description(ctx, field)
+			case "creationTimestamp":
+				return ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
+			case "updateTimestamp":
+				return ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
 			case "embedder":
 				return ec.fieldContext_KnowledgeBase_embedder(ctx, field)
 			case "vectorStore":
@@ -10547,10 +10664,6 @@ func (ec *executionContext) fieldContext_KnowledgeBaseQuery_getKnowledgeBase(ctx
 				return ec.fieldContext_KnowledgeBase_fileGroupDetails(ctx, field)
 			case "status":
 				return ec.fieldContext_KnowledgeBase_status(ctx, field)
-			case "creationTimestamp":
-				return ec.fieldContext_KnowledgeBase_creationTimestamp(ctx, field)
-			case "updateTimestamp":
-				return ec.fieldContext_KnowledgeBase_updateTimestamp(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type KnowledgeBase", field.Name)
 		},
@@ -13022,6 +13135,47 @@ func (ec *executionContext) fieldContext_TypedObjectReference_namespace(ctx cont
 	return fc, nil
 }
 
+func (ec *executionContext) _VersionedDataset_id(ctx context.Context, field graphql.CollectedField, obj *VersionedDataset) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VersionedDataset_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VersionedDataset_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VersionedDataset",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _VersionedDataset_name(ctx context.Context, field graphql.CollectedField, obj *VersionedDataset) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_VersionedDataset_name(ctx, field)
 	if err != nil {
@@ -13730,6 +13884,8 @@ func (ec *executionContext) fieldContext_VersionedDatasetMutation_createVersione
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_VersionedDataset_id(ctx, field)
 			case "name":
 				return ec.fieldContext_VersionedDataset_name(ctx, field)
 			case "namespace":
@@ -13817,6 +13973,8 @@ func (ec *executionContext) fieldContext_VersionedDatasetMutation_updateVersione
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_VersionedDataset_id(ctx, field)
 			case "name":
 				return ec.fieldContext_VersionedDataset_name(ctx, field)
 			case "namespace":
@@ -13956,6 +14114,8 @@ func (ec *executionContext) fieldContext_VersionedDatasetQuery_getVersionedDatas
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_VersionedDataset_id(ctx, field)
 			case "name":
 				return ec.fieldContext_VersionedDataset_name(ctx, field)
 			case "namespace":
@@ -20644,6 +20804,10 @@ func (ec *executionContext) _KnowledgeBase(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._KnowledgeBase_displayName(ctx, field, obj)
 		case "description":
 			out.Values[i] = ec._KnowledgeBase_description(ctx, field, obj)
+		case "creationTimestamp":
+			out.Values[i] = ec._KnowledgeBase_creationTimestamp(ctx, field, obj)
+		case "updateTimestamp":
+			out.Values[i] = ec._KnowledgeBase_updateTimestamp(ctx, field, obj)
 		case "embedder":
 			out.Values[i] = ec._KnowledgeBase_embedder(ctx, field, obj)
 		case "vectorStore":
@@ -20652,10 +20816,6 @@ func (ec *executionContext) _KnowledgeBase(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._KnowledgeBase_fileGroupDetails(ctx, field, obj)
 		case "status":
 			out.Values[i] = ec._KnowledgeBase_status(ctx, field, obj)
-		case "creationTimestamp":
-			out.Values[i] = ec._KnowledgeBase_creationTimestamp(ctx, field, obj)
-		case "updateTimestamp":
-			out.Values[i] = ec._KnowledgeBase_updateTimestamp(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -21711,6 +21871,8 @@ func (ec *executionContext) _VersionedDataset(ctx context.Context, sel ast.Selec
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("VersionedDataset")
+		case "id":
+			out.Values[i] = ec._VersionedDataset_id(ctx, field, obj)
 		case "name":
 			out.Values[i] = ec._VersionedDataset_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

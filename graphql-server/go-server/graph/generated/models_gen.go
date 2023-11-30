@@ -103,6 +103,7 @@ type CreateEmbedderInput struct {
 	ServiceType *string `json:"serviceType,omitempty"`
 }
 
+// 创建知识库的输入
 type CreateKnowledgeBaseInput struct {
 	// 知识库资源名称（不可同名）
 	Name string `json:"name"`
@@ -116,9 +117,9 @@ type CreateKnowledgeBaseInput struct {
 	DisplayName *string `json:"displayName,omitempty"`
 	// 知识库资源描述
 	Description *string `json:"description,omitempty"`
-	// 模型服务
+	// embedder指当前知识库使用的embedding向量化模型
 	Embedder string `json:"embedder"`
-	// "向量数据库(使用默认值)
+	// "向量数据库(目前不需要填写，直接使用系统默认的向量数据库)
 	VectorStore *TypedObjectReferenceInput `json:"vectorStore,omitempty"`
 	// 知识库文件
 	FileGroups []*Filegroupinput `json:"fileGroups,omitempty"`
@@ -277,10 +278,10 @@ type DataProcessSupportTypeItem struct {
 // 数据集允许有多个版本，数据处理针对单个版本进行
 // 数据集某个版本完成数据处理后，数据处理服务需要将处理后的存储回 版本数据集
 type Dataset struct {
-	// 数据集名称
+	// 名称
 	// 规则: 遵循k8s命名
 	Name string `json:"name"`
-	// 数据集所在的namespace(文件上传时作为bucket)
+	// 所在的namespace(文件上传时作为bucket)
 	// 规则: 获取当前项目对应的命名空间
 	// 规则: 非空
 	Namespace string `json:"namespace"`
@@ -419,6 +420,7 @@ type DeleteEmbedderInput struct {
 	FieldSelector *string `json:"fieldSelector,omitempty"`
 }
 
+// 知识库删除的输入
 type DeleteKnowledgeBaseInput struct {
 	Name      *string `json:"name,omitempty"`
 	Namespace string  `json:"namespace"`
@@ -527,22 +529,40 @@ type FileItem struct {
 	Name string `json:"name"`
 }
 
+// 知识库
 type KnowledgeBase struct {
-	ID               *string                `json:"id,omitempty"`
-	Name             string                 `json:"name"`
-	Namespace        string                 `json:"namespace"`
-	Labels           map[string]interface{} `json:"labels,omitempty"`
-	Annotations      map[string]interface{} `json:"annotations,omitempty"`
-	Creator          *string                `json:"creator,omitempty"`
-	DisplayName      *string                `json:"displayName,omitempty"`
-	Description      *string                `json:"description,omitempty"`
-	Embedder         *TypedObjectReference  `json:"embedder,omitempty"`
-	VectorStore      *TypedObjectReference  `json:"vectorStore,omitempty"`
-	FileGroupDetails []*Filegroupdetail     `json:"fileGroupDetails,omitempty"`
-	// 知识库连接状态
-	Status            *string    `json:"status,omitempty"`
+	// 知识库id,为CR资源中的metadata.uid
+	ID *string `json:"id,omitempty"`
+	// 名称
+	// 规则: 遵循k8s命名
+	Name string `json:"name"`
+	// 所在的namespace(文件上传时作为bucket)
+	// 规则: 获取当前项目对应的命名空间
+	// 规则: 非空
+	Namespace string `json:"namespace"`
+	// 一些用于标记，选择的的标签
+	Labels map[string]interface{} `json:"labels,omitempty"`
+	// 添加一些辅助性记录信息
+	Annotations map[string]interface{} `json:"annotations,omitempty"`
+	// 创建者，为当前用户的用户名
+	// 规则: webhook启用后自动添加，默认为空
+	Creator *string `json:"creator,omitempty"`
+	// 展示名
+	DisplayName *string `json:"displayName,omitempty"`
+	// 描述信息
+	Description *string `json:"description,omitempty"`
+	// 创建时间
 	CreationTimestamp *time.Time `json:"creationTimestamp,omitempty"`
-	UpdateTimestamp   *time.Time `json:"updateTimestamp,omitempty"`
+	// 更新时间
+	UpdateTimestamp *time.Time `json:"updateTimestamp,omitempty"`
+	// embedder指当前知识库使用的embedding向量化模型，即 Kind 为 Embedder
+	Embedder *TypedObjectReference `json:"embedder,omitempty"`
+	// vectorStore指当前知识库使用的向量数据库服务，即 Kind 为 VectorStore
+	VectorStore *TypedObjectReference `json:"vectorStore,omitempty"`
+	// fileGroupDetails为知识库中所处理的文件组的详细内容和状态
+	FileGroupDetails []*Filegroupdetail `json:"fileGroupDetails,omitempty"`
+	// 知识库整体连接状态
+	Status *string `json:"status,omitempty"`
 }
 
 func (KnowledgeBase) IsPageNode() {}
@@ -619,6 +639,7 @@ type ListEmbedderInput struct {
 	Keyword       *string `json:"keyword,omitempty"`
 }
 
+// 知识库分页列表查询的输入
 type ListKnowledgeBaseInput struct {
 	Name        *string `json:"name,omitempty"`
 	Namespace   string  `json:"namespace"`
@@ -627,9 +648,15 @@ type ListKnowledgeBaseInput struct {
 	LabelSelector *string `json:"labelSelector,omitempty"`
 	// 字段选择器
 	FieldSelector *string `json:"fieldSelector,omitempty"`
-	Page          *int    `json:"page,omitempty"`
-	PageSize      *int    `json:"pageSize,omitempty"`
-	Keyword       *string `json:"keyword,omitempty"`
+	// 分页页码，
+	// 规则: 从1开始，默认是1
+	Page *int `json:"page,omitempty"`
+	// 每页数量，
+	// 规则: 默认10
+	PageSize *int `json:"pageSize,omitempty"`
+	// 关键词: 模糊匹配
+	// 规则: name,displayName中如果包含该字段则返回
+	Keyword *string `json:"keyword,omitempty"`
 }
 
 type ListModelInput struct {
@@ -779,6 +806,7 @@ type UpdateEmbedderInput struct {
 	Description *string `json:"description,omitempty"`
 }
 
+// 知识库更新的输入
 type UpdateKnowledgeBaseInput struct {
 	// 知识库资源名称（不可同名）
 	Name string `json:"name"`
@@ -788,9 +816,9 @@ type UpdateKnowledgeBaseInput struct {
 	Labels map[string]interface{} `json:"labels,omitempty"`
 	// 知识库资源注释
 	Annotations map[string]interface{} `json:"annotations,omitempty"`
-	// 知识库资源展示名称作为显示，并提供编辑
+	// 如不更新，则为空
 	DisplayName *string `json:"displayName,omitempty"`
-	// 知识库资源描述
+	// 如不更新，则为空
 	Description *string `json:"description,omitempty"`
 }
 
@@ -833,6 +861,8 @@ type UpdateVersionedDatasetInput struct {
 // 数据集的版本信息。
 // 主要记录版本名字，数据的来源，以及文件的同步状态
 type VersionedDataset struct {
+	// 版本数据集id,为CR资源中的metadata.uid
+	ID *string `json:"id,omitempty"`
 	// 数据集名称, 这个应该是前端随机生成就可以，没有实际用途
 	Name string `json:"name"`
 	// 数据集所在的namespace，也是后续桶的名字
@@ -877,6 +907,8 @@ type VersionedDatasetQuery struct {
 	ListVersionedDatasets PaginatedResult  `json:"listVersionedDatasets"`
 }
 
+// 文件详情
+// 描述: 文件在知识库中的详细状态
 type Filedetail struct {
 	// 文件路径
 	Path string `json:"path"`
@@ -885,14 +917,24 @@ type Filedetail struct {
 	Phase string `json:"phase"`
 }
 
+// 文件组
+// 规则: 属于同一个源(数据集)的文件要放在同一个filegroup中
+// 规则: path直接读取文件里表中的文件路径即可
 type Filegroup struct {
+	// 源；目前仅支持版本数据集，即 Kind为 VersionedDataset
 	Source *TypedObjectReference `json:"source,omitempty"`
-	Path   []string              `json:"path,omitempty"`
+	// 路径数组
+	Path []string `json:"path,omitempty"`
 }
 
+// 文件组详情
+// 描述: 文件组在知识库中的状态
 type Filegroupdetail struct {
-	Source      *TypedObjectReference `json:"source,omitempty"`
-	Filedetails []*Filedetail         `json:"filedetails,omitempty"`
+	// 源；目前仅支持版本数据集，即 Kind为 VersionedDataset
+	Source *TypedObjectReference `json:"source,omitempty"`
+	// 文件详情
+	// 规则；数组。具体文件详情参考 filedetail描述
+	Filedetails []*Filedetail `json:"filedetails,omitempty"`
 }
 
 // 源文件输入

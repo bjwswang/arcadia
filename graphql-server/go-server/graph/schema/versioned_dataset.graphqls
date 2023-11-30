@@ -4,6 +4,11 @@ VersionedDataset
 主要记录版本名字，数据的来源，以及文件的同步状态
 """
 type VersionedDataset {
+    """
+    版本数据集id,为CR资源中的metadata.uid
+    """
+    id: String
+
     """数据集名称, 这个应该是前端随机生成就可以，没有实际用途"""
     name: String!
 

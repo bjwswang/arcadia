@@ -19,6 +19,7 @@ package knowledgebase
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +29,7 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
+	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
 	model "github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
 )
 
@@ -215,13 +217,33 @@ func ReadKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace
 	return knowledgebase2model(u), nil
 }
 
-func ListKnowledgeBases(ctx context.Context, c dynamic.Interface, namespace, labelSelector, fieldSelector string) ([]*model.KnowledgeBase, error) {
+func ListKnowledgeBases(ctx context.Context, c dynamic.Interface, input generated.ListKnowledgeBaseInput) (*generated.PaginatedResult, error) {
+	name, displayName, labelSelector, fieldSelector := "", "", "", ""
+	page, pageSize := 1, 10
+	if input.Name != nil {
+		name = *input.Name
+	}
+	if input.DisplayName != nil {
+		displayName = *input.DisplayName
+	}
+	if input.FieldSelector != nil {
+		fieldSelector = *input.FieldSelector
+	}
+	if input.LabelSelector != nil {
+		labelSelector = *input.LabelSelector
+	}
+	if input.Page != nil && *input.Page > 0 {
+		page = *input.Page
+	}
+	if input.PageSize != nil && *input.PageSize > 0 {
+		pageSize = *input.PageSize
+	}
 	dsSchema := schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "knowledgebases"}
 	listOptions := metav1.ListOptions{
 		LabelSelector: labelSelector,
 		FieldSelector: fieldSelector,
 	}
-	us, err := c.Resource(dsSchema).Namespace(namespace).List(ctx, listOptions)
+	us, err := c.Resource(dsSchema).Namespace(input.Namespace).List(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -232,5 +254,22 @@ func ListKnowledgeBases(ctx context.Context, c dynamic.Interface, namespace, lab
 	for idx, u := range us.Items {
 		result[idx] = knowledgebase2model(&u)
 	}
-	return result, nil
+
+	var filteredResult []generated.PageNode
+	for idx, u := range result {
+		if (name == "" || strings.Contains(u.Name, name)) && (displayName == "" || strings.Contains(*u.DisplayName, displayName)) {
+			filteredResult = append(filteredResult, result[idx])
+		}
+	}
+
+	totalCount := len(filteredResult)
+	end := page * pageSize
+	if end > totalCount {
+		end = totalCount
+	}
+	return &generated.PaginatedResult{
+		TotalCount:  totalCount,
+		HasNextPage: end < totalCount,
+		Nodes:       filteredResult[(page-1)*pageSize : end],
+	}, nil
 }
