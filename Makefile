@@ -254,7 +254,15 @@ gql-gen:
 build-graphql-server: gql-gen
 	@CGO_ENABLED=0 GOOS=linux go build -o bin/graphql-server graphql-server/go-server/main.go
 run-graphql-server:
-	POD_NAMESPACE=arcadia go run graphql-server/go-server/main.go --enable-playground=true &
+	POD_NAMESPACE=arcadia go run graphql-server/go-server/main.go \
+	--enable-playground --port=8081 \
+    --playground-endpoint-prefix=kubeagi-apis \
+    --enable-oidc=true \
+    --client-id=bff-client --client-secret=61324af0-1234-4f61-b110-ef57013267d6 \
+    --master-url=https://k8s.172.22.96.136.nip.io \
+    --issuer-url=https://portal.172.22.96.136.nip.io/oidc \
+    --data-processing-url=http://arcadia-dataprocess.arcadia.svc.cluster.local:28888 \
+    > graphql-server.log 2>&1 &
 
 # sdk for graphql-server api
 GRL_SDK_GENERATOR_IMAGE ?= kubebb/gql-sdk-generator
