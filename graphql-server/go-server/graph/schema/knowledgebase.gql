@@ -33,6 +33,9 @@ query listKnowledgeBases($input: ListKnowledgeBaseInput!){
             filedetails{
                 path
                 phase
+                type
+                count
+                size
             }
           }
         }

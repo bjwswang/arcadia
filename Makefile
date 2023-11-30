@@ -257,7 +257,7 @@ run-graphql-server:
 	POD_NAMESPACE=arcadia go run graphql-server/go-server/main.go \
 	--enable-playground --port=8081 \
     --playground-endpoint-prefix=kubeagi-apis \
-    --enable-oidc=true \
+    --enable-oidc \
     --client-id=bff-client --client-secret=61324af0-1234-4f61-b110-ef57013267d6 \
     --master-url=https://k8s.172.22.96.136.nip.io \
     --issuer-url=https://portal.172.22.96.136.nip.io/oidc \
