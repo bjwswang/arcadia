@@ -516,19 +516,29 @@ func RegisterMinIOAPI(e *gin.Engine, conf config.ServerConfig) {
 
 	group.GET("/model/files/get_chunks", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetSuccessChunks)
 	group.GET("/versioneddataset/files/get_chunks", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "versioneddatasets"), api.GetSuccessChunks)
+    group.GET("get_chunks", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetSuccessChunks)
+
 
 	// POST
 	group.GET("/model/files/new_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.NewMultipart)
 	group.GET("/versioneddataset/files/new_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "versioneddatasets"), api.NewMultipart)
+    group.GET("new_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.NewMultipart)
+
 
 	group.GET("/model/files/get_multipart_url", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetMultipartUploadURL)
 	group.GET("/versioneddataset/files/get_multipart_url", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "versioneddatasets"), api.GetMultipartUploadURL)
+    group.GET("get_multipart_url", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetMultipartUploadURL)
+
 
 	group.POST("/model/files/update_chunk", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "update", "models"), api.UpdateMultipart)
 	group.POST("/versioneddataset/files/update_chunk", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "update", "versioneddatasets"), api.UpdateMultipart)
+    group.POST("update_chunk", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "update", "models"), api.UpdateMultipart)
+
 
 	group.POST("/model/files/complete_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "create", "models"), api.CompleteMultipart)
 	group.POST("/versioneddataset/files/complete_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "create", "versioneddatasets"), api.CompleteMultipart)
+    group.POST("complete_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "create", "models"), api.CompleteMultipart)
+
 
 	group.DELETE("/model/files/delete_files", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "delete", "models"), api.DeleteFiles)
 	group.DELETE("/versioneddataset/files/delete_files", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "delete", "versioneddatasets"), api.DeleteFiles)
