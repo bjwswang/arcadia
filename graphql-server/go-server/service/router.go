@@ -48,6 +48,7 @@ func NewServerAndRun(conf config.ServerConfig) {
 	}
 	RegisterMinIOAPI(r, conf)
 	RegisterGraphQL(r, conf)
+	RegisteryChat(r, conf)
 
 	_ = r.Run(fmt.Sprintf("%s:%d", conf.Host, conf.Port))
 }

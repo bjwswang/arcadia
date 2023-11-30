@@ -33,6 +33,20 @@ import (
 	"github.com/kubeagi/arcadia/graphql-server/go-server/pkg/oidc"
 )
 
+func graphqlHandler() gin.HandlerFunc {
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &impl.Resolver{}}))
+	srv.AroundFields(func(ctx context.Context, next graphql.Resolver) (res interface{}, err error) {
+		rc := graphql.GetFieldContext(ctx)
+		klog.Infoln("Entered", rc.Object, rc.Field.Name)
+		res, err = next(ctx)
+		klog.Infoln("Left", rc.Object, rc.Field.Name, "=>", res, err)
+		return res, err
+	})
+	return func(c *gin.Context) {
+		srv.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
 func RegisterGraphQL(g *gin.Engine, conf config.ServerConfig) {
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &impl.Resolver{}}))
 	srv.AroundFields(func(ctx context.Context, next graphql.Resolver) (res interface{}, err error) {
@@ -53,5 +67,5 @@ func RegisterGraphQL(g *gin.Engine, conf config.ServerConfig) {
 		g.GET("/", gin.WrapH(playground.Handler("Arcadia-Graphql-Server", endpoint)))
 	}
 
-	g.POST("/bff", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "", ""))
+	g.POST("/bff", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "", ""), graphqlHandler())
 }
