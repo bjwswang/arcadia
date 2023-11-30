@@ -7,7 +7,7 @@ query listKnowledgeBases($input: ListKnowledgeBaseInput!){
       nodes {
         ... on KnowledgeBase {
           id
-          createTimestamp
+          creationTimestamp
           name
           namespace
           labels
@@ -46,7 +46,7 @@ query getKnowledgeBase($name: String!, $namespace: String!) {
   KnowledgeBase {
     getKnowledgeBase(name: $name, namespace: $namespace){
           id
-          createTimestamp
+          creationTimestamp
           name
           namespace
           labels
@@ -83,7 +83,7 @@ mutation createKnowledgeBase($input: CreateKnowledgeBaseInput!) {
   KnowledgeBase {
     createKnowledgeBase(input: $input) {
           id
-          createTimestamp
+          creationTimestamp
           name
           namespace
           labels
@@ -120,7 +120,7 @@ mutation updateKnowledgeBase($input: UpdateKnowledgeBaseInput) {
   KnowledgeBase {
     updateKnowledgeBase(input: $input){
           id
-          createTimestamp
+          creationTimestamp
           name
           namespace
           labels
