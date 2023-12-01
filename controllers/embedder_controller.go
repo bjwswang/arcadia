@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -27,9 +28,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	arcadiav1alpha1 "github.com/kubeagi/arcadia/api/base/v1alpha1"
 	"github.com/kubeagi/arcadia/pkg/embeddings"
@@ -85,7 +89,7 @@ func (r *EmbedderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, err
 		}
 		logger.Info("Adding Finalizer for Embedder done")
-		return ctrl.Result{}, nil
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Check if the Embedder instance is marked to be deleted, which is
@@ -113,7 +117,24 @@ func (r *EmbedderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 // SetupWithManager sets up the controller with the Manager.
 func (r *EmbedderReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arcadiav1alpha1.Embedder{}).
+		For(&arcadiav1alpha1.Embedder{}, builder.WithPredicates(predicate.Funcs{
+			UpdateFunc: func(ue event.UpdateEvent) bool {
+				// Avoid to handle the event that it's not spec update or delete
+				oldEmbedder := ue.ObjectOld.(*arcadiav1alpha1.Embedder)
+				newEmbedder := ue.ObjectNew.(*arcadiav1alpha1.Embedder)
+				return !reflect.DeepEqual(oldEmbedder.Spec, newEmbedder.Spec) || newEmbedder.DeletionTimestamp != nil
+			},
+			// for other event handler, we must add the function explictly.
+			CreateFunc: func(event.CreateEvent) bool {
+				return true
+			},
+			DeleteFunc: func(event.DeleteEvent) bool {
+				return true
+			},
+			GenericFunc: func(event.GenericEvent) bool {
+				return true
+			},
+		})).
 		Complete(r)
 }
 
