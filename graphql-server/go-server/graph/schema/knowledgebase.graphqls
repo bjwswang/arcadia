@@ -26,7 +26,7 @@ type filedetail{
     文件类型
     规则: enum { QA }
     """
-    type: String!
+    fileType: String!
 
     """
     文件中的数据条目总数

@@ -385,10 +385,10 @@ type ComplexityRoot struct {
 
 	Filedetail struct {
 		Count           func(childComplexity int) int
+		FileType        func(childComplexity int) int
 		Path            func(childComplexity int) int
 		Phase           func(childComplexity int) int
 		Size            func(childComplexity int) int
-		Type            func(childComplexity int) int
 		UpdateTimestamp func(childComplexity int) int
 	}
 
@@ -2122,6 +2122,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Filedetail.Count(childComplexity), true
 
+	case "filedetail.fileType":
+		if e.complexity.Filedetail.FileType == nil {
+			break
+		}
+
+		return e.complexity.Filedetail.FileType(childComplexity), true
+
 	case "filedetail.path":
 		if e.complexity.Filedetail.Path == nil {
 			break
@@ -2142,13 +2149,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Filedetail.Size(childComplexity), true
-
-	case "filedetail.type":
-		if e.complexity.Filedetail.Type == nil {
-			break
-		}
-
-		return e.complexity.Filedetail.Type(childComplexity), true
 
 	case "filedetail.updateTimestamp":
 		if e.complexity.Filedetail.UpdateTimestamp == nil {
@@ -3101,7 +3101,7 @@ type filedetail{
     文件类型
     规则: enum { QA }
     """
-    type: String!
+    fileType: String!
 
     """
     文件中的数据条目总数
@@ -16162,8 +16162,8 @@ func (ec *executionContext) fieldContext_filedetail_path(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _filedetail_type(ctx context.Context, field graphql.CollectedField, obj *Filedetail) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_filedetail_type(ctx, field)
+func (ec *executionContext) _filedetail_fileType(ctx context.Context, field graphql.CollectedField, obj *Filedetail) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_filedetail_fileType(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -16176,7 +16176,7 @@ func (ec *executionContext) _filedetail_type(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Type, nil
+		return obj.FileType, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -16193,7 +16193,7 @@ func (ec *executionContext) _filedetail_type(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_filedetail_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_filedetail_fileType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "filedetail",
 		Field:      field,
@@ -16560,8 +16560,8 @@ func (ec *executionContext) fieldContext_filegroupdetail_filedetails(ctx context
 			switch field.Name {
 			case "path":
 				return ec.fieldContext_filedetail_path(ctx, field)
-			case "type":
-				return ec.fieldContext_filedetail_type(ctx, field)
+			case "fileType":
+				return ec.fieldContext_filedetail_fileType(ctx, field)
 			case "count":
 				return ec.fieldContext_filedetail_count(ctx, field)
 			case "size":
@@ -22860,8 +22860,8 @@ func (ec *executionContext) _filedetail(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "type":
-			out.Values[i] = ec._filedetail_type(ctx, field, obj)
+		case "fileType":
+			out.Values[i] = ec._filedetail_fileType(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

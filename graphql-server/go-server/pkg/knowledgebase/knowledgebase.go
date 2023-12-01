@@ -75,7 +75,7 @@ func knowledgebase2model(obj *unstructured.Unstructured) *generated.KnowledgeBas
 			}
 
 			filedetail := &generated.Filedetail{
-				Type:            fileType,
+				FileType:        fileType,
 				Count:           count,
 				Size:            size,
 				Path:            path,

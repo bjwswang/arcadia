@@ -945,7 +945,7 @@ type Filedetail struct {
 	Path string `json:"path"`
 	// 文件类型
 	// 规则: enum { QA }
-	Type string `json:"type"`
+	FileType string `json:"fileType"`
 	// 文件中的数据条目总数
 	Count string `json:"count"`
 	// 文件大小

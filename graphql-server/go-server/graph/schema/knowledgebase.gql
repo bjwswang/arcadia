@@ -33,7 +33,7 @@ query listKnowledgeBases($input: ListKnowledgeBaseInput!){
             filedetails{
                 path
                 phase
-                type
+                fileType
                 count
                 size
                 updateTimestamp
@@ -76,7 +76,7 @@ query getKnowledgeBase($name: String!, $namespace: String!) {
             filedetails{
                 path
                 phase
-                type
+                fileType
                 count
                 size
                 updateTimestamp
@@ -117,7 +117,7 @@ mutation createKnowledgeBase($input: CreateKnowledgeBaseInput!) {
             filedetails{
                 path
                 phase
-                type
+                fileType
                 count
                 size
                 updateTimestamp
@@ -158,7 +158,7 @@ mutation updateKnowledgeBase($input: UpdateKnowledgeBaseInput) {
             filedetails{
                 path
                 phase
-                type
+                fileType
                 count
                 size
                 updateTimestamp
