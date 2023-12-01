@@ -193,20 +193,44 @@ func CreateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespa
 	return kb, nil
 }
 
-func UpdateKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace, displayname string) (*generated.KnowledgeBase, error) {
+func UpdateKnowledgeBase(ctx context.Context, c dynamic.Interface, input *generated.UpdateKnowledgeBaseInput) (*generated.KnowledgeBase, error) {
 	resource := c.Resource(schema.GroupVersionResource{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: "knowledgebases"})
-	obj, err := resource.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := resource.Namespace(input.Namespace).Get(ctx, input.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	obj.Object["spec"].(map[string]interface{})["displayName"] = displayname
-	updatedObject, err := resource.Namespace(namespace).Update(ctx, obj, metav1.UpdateOptions{})
+	// Create an instance of the structured custom resource type
+	structuredObj := &v1alpha1.KnowledgeBase{}
+	if err = utils.UnstructuredToStructured(obj, structuredObj); err != nil {
+		return nil, err
+	}
+
+	if input.DisplayName != nil && *input.DisplayName != structuredObj.Spec.DisplayName {
+		obj.Object["spec"].(map[string]interface{})["displayName"] = *input.DisplayName
+	}
+	if input.Description != nil && *input.Description != structuredObj.Spec.Description {
+		obj.Object["spec"].(map[string]interface{})["description"] = *input.Description
+	}
+
+	if input.FileGroups != nil {
+		filegroups := make([]v1alpha1.FileGroup, len(input.FileGroups))
+		for index, f := range input.FileGroups {
+			filegroup := v1alpha1.FileGroup{
+				Source: (*v1alpha1.TypedObjectReference)(&f.Source),
+				Paths:  f.Path,
+			}
+			filegroups[index] = filegroup
+		}
+		obj.Object["spec"].(map[string]interface{})["fileGroups"] = filegroups
+	}
+
+	updatedObject, err := resource.Namespace(input.Namespace).Update(ctx, obj, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
-	kb := knowledgebase2model(updatedObject)
-	return kb, nil
+
+	return knowledgebase2model(updatedObject), nil
 }
 
 func DeleteKnowledgeBase(ctx context.Context, c dynamic.Interface, name, namespace, labelSelector, fieldSelector string) (*string, error) {

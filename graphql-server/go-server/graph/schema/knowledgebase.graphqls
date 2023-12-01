@@ -181,6 +181,9 @@ input UpdateKnowledgeBaseInput {
 
     """如不更新，则为空"""
     description: String
+
+    """更新知识库文件"""
+    fileGroups: [filegroupinput!]
 }
 
 """知识库删除的输入"""

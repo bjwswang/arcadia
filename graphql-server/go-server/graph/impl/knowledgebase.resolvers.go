@@ -60,15 +60,7 @@ func (r *knowledgeBaseMutationResolver) UpdateKnowledgeBase(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	name, displayname := "", ""
-	if input.DisplayName != nil {
-		displayname = *input.DisplayName
-	}
-	if input.Name != "" {
-		name = input.Name
-
-	}
-	return knowledgebase.UpdateKnowledgeBase(ctx, c, name, input.Namespace, displayname)
+	return knowledgebase.UpdateKnowledgeBase(ctx, c, input)
 }
 
 // DeleteKnowledgeBase is the resolver for the deleteKnowledgeBase field.

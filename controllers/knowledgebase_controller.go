@@ -54,10 +54,6 @@ const (
 	waitLonger  = time.Hour
 	waitSmaller = time.Second * 3
 	waitMedium  = time.Second * 30
-
-	ObjectTypeTag  = "object_type"
-	ObjectCountTag = "object_count"
-	ObjectTypeQA   = "QA"
 )
 
 var (
@@ -242,7 +238,10 @@ func (r *KnowledgeBaseReconciler) reconcileFileGroup(ctx context.Context, log lo
 		return errNoSource
 	}
 	versionedDataset := &arcadiav1alpha1.VersionedDataset{}
-	ns := group.Source.GetNamespace()
+	ns := kb.Namespace
+	if group.Source.Namespace != nil {
+		ns = *group.Source.Namespace
+	}
 	if err = r.Get(ctx, types.NamespacedName{Name: group.Source.Name, Namespace: ns}, versionedDataset); err != nil {
 		if apierrors.IsNotFound(err) {
 			return errNoSource
@@ -340,9 +339,9 @@ func (r *KnowledgeBaseReconciler) reconcileFileGroup(ctx context.Context, log lo
 		// File Size in string
 		fileDetail.Size = utils.BytesToSize(objectStat.Size)
 		// File Type in string
-		fileDetail.Type = tags[ObjectTypeTag]
+		fileDetail.Type = tags[arcadiav1alpha1.ObjectTypeTag]
 		// File data count in string
-		fileDetail.Count = tags[ObjectCountTag]
+		fileDetail.Count = tags[arcadiav1alpha1.ObjectCountTag]
 
 		file, err := ds.ReadFile(ctx, info)
 		if err != nil {
@@ -372,7 +371,7 @@ func (r *KnowledgeBaseReconciler) handleFile(ctx context.Context, log logr.Logge
 		log.Info("file tags is nil, ignore")
 		return fmt.Errorf("file tags is nil, %w", errFileSkipped)
 	}
-	v, ok := tags[ObjectTypeTag]
+	v, ok := tags[arcadiav1alpha1.ObjectTypeTag]
 	if !ok {
 		log.Info("file tags object type not found, ignore")
 		return fmt.Errorf("file tags object type not found, %w", errFileSkipped)
@@ -408,7 +407,7 @@ func (r *KnowledgeBaseReconciler) handleFile(ctx context.Context, log logr.Logge
 	case "txt":
 		loader = documentloaders.NewText(dataReader)
 	case "csv":
-		if v == ObjectTypeQA {
+		if v == arcadiav1alpha1.ObjectTypeQA {
 			loader = pkgdocumentloaders.NewQACSV(dataReader, fileName, "q", "a")
 		} else {
 			loader = documentloaders.NewCSV(dataReader)

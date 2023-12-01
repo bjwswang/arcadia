@@ -3272,6 +3272,9 @@ input UpdateKnowledgeBaseInput {
 
     """如不更新，则为空"""
     description: String
+
+    """更新知识库文件"""
+    fileGroups: [filegroupinput!]
 }
 
 """知识库删除的输入"""
@@ -3551,13 +3554,13 @@ type F {
     fileType: String!
 
     """数据量"""
-    count: Int
+    count: String
 
-    """文件成功导入时间，如果没有导入成功，这个字段为空"""
+    """文件更新时间，如果没有导入成功，这个字段为空"""
     time: Time
 
     """文件大小"""
-    size: Int64
+    size: String
 
     """文件创建时间"""
     creationTimestamp: Time    
@@ -9851,9 +9854,9 @@ func (ec *executionContext) _F_count(ctx context.Context, field graphql.Collecte
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_F_count(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9863,7 +9866,7 @@ func (ec *executionContext) fieldContext_F_count(ctx context.Context, field grap
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -9933,9 +9936,9 @@ func (ec *executionContext) _F_size(ctx context.Context, field graphql.Collected
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int64)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_F_size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9945,7 +9948,7 @@ func (ec *executionContext) fieldContext_F_size(ctx context.Context, field graph
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -18901,7 +18904,7 @@ func (ec *executionContext) unmarshalInputUpdateKnowledgeBaseInput(ctx context.C
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "namespace", "labels", "annotations", "displayName", "description"}
+	fieldsInOrder := [...]string{"name", "namespace", "labels", "annotations", "displayName", "description", "fileGroups"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -18962,6 +18965,15 @@ func (ec *executionContext) unmarshalInputUpdateKnowledgeBaseInput(ctx context.C
 				return it, err
 			}
 			it.Description = data
+		case "fileGroups":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fileGroups"))
+			data, err := ec.unmarshalOfilegroupinput2ᚕᚖgithubᚗcomᚋkubeagiᚋarcadiaᚋgraphqlᚑserverᚋgoᚑserverᚋgraphᚋgeneratedᚐFilegroupinputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.FileGroups = data
 		}
 	}
 
@@ -24302,22 +24314,6 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 		return graphql.Null
 	}
 	res := graphql.MarshalInt(*v)
-	return res
-}
-
-func (ec *executionContext) unmarshalOInt642ᚖint64(ctx context.Context, v interface{}) (*int64, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalInt64(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOInt642ᚖint64(ctx context.Context, sel ast.SelectionSet, v *int64) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	res := graphql.MarshalInt64(*v)
 	return res
 }
 

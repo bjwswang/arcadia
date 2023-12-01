@@ -23,17 +23,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeagi/arcadia/api/base/v1alpha1"
+	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
+	"github.com/kubeagi/arcadia/graphql-server/go-server/pkg/minio"
+	"github.com/kubeagi/arcadia/pkg/utils"
+	"github.com/kubeagi/arcadia/pkg/utils/minioutils"
+	miniogo "github.com/minio/minio-go/v7"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-
-	"github.com/kubeagi/arcadia/api/base/v1alpha1"
-	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
-	"github.com/kubeagi/arcadia/graphql-server/go-server/pkg/minio"
-	"github.com/kubeagi/arcadia/pkg/utils/minioutils"
 )
 
 var (
@@ -42,7 +43,6 @@ var (
 		Version:  v1alpha1.GroupVersion.Version,
 		Resource: "versioneddatasets",
 	}
-	dataCount = 0
 )
 
 func versionedDataset2model(obj *unstructured.Unstructured) (*generated.VersionedDataset, error) {
@@ -125,14 +125,26 @@ func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.Ver
 	for _, obj := range objectInfoList {
 		if keyword == "" || strings.Contains(obj.Key, keyword) {
 			tf := generated.F{
-				Path:  strings.TrimPrefix(obj.Key, prefix),
-				Count: &dataCount,
-				Time:  &obj.LastModified,
-				Size:  &obj.Size,
+				Path: strings.TrimPrefix(obj.Key, prefix),
+				Time: &obj.LastModified,
 			}
-			if v, ok := obj.UserMetadata[minio.FileContentType]; ok {
-				tf.FileType = v
+
+			size := utils.BytesToSize(obj.Size)
+			tf.Size = &size
+
+			// parse tags
+			tags, err := minioClient.GetObjectTagging(ctx, input.Namespace, obj.Key, miniogo.GetObjectTaggingOptions{})
+			if err == nil {
+				tagsMap := tags.ToMap()
+				if v, ok := tagsMap[v1alpha1.ObjectTypeTag]; ok {
+					tf.FileType = v
+				}
+
+				if v, ok := tagsMap[v1alpha1.ObjectCountTag]; ok {
+					tf.Count = &v
+				}
 			}
+
 			if v, ok := obj.UserTags[minio.CreationTimestamp]; ok {
 				if now, err := time.Parse(time.RFC3339, v); err == nil {
 					tf.CreationTimestamp = &now

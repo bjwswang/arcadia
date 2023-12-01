@@ -503,11 +503,11 @@ type F struct {
 	// 文件类型
 	FileType string `json:"fileType"`
 	// 数据量
-	Count *int `json:"count,omitempty"`
-	// 文件成功导入时间，如果没有导入成功，这个字段为空
+	Count *string `json:"count,omitempty"`
+	// 文件更新时间，如果没有导入成功，这个字段为空
 	Time *time.Time `json:"time,omitempty"`
 	// 文件大小
-	Size *int64 `json:"size,omitempty"`
+	Size *string `json:"size,omitempty"`
 	// 文件创建时间
 	CreationTimestamp *time.Time `json:"creationTimestamp,omitempty"`
 }
@@ -854,6 +854,8 @@ type UpdateKnowledgeBaseInput struct {
 	DisplayName *string `json:"displayName,omitempty"`
 	// 如不更新，则为空
 	Description *string `json:"description,omitempty"`
+	// 更新知识库文件
+	FileGroups []*Filegroupinput `json:"fileGroups,omitempty"`
 }
 
 // 模型更新的输入
