@@ -47,6 +47,7 @@ import (
 	"github.com/kubeagi/arcadia/pkg/embeddings"
 	zhipuaiembeddings "github.com/kubeagi/arcadia/pkg/embeddings/zhipuai"
 	"github.com/kubeagi/arcadia/pkg/llms/zhipuai"
+	"github.com/kubeagi/arcadia/pkg/utils"
 )
 
 const (
@@ -54,8 +55,9 @@ const (
 	waitSmaller = time.Second * 3
 	waitMedium  = time.Second * 30
 
-	ObjectTypeTag = "object_type"
-	ObjectTypeQA  = "QA"
+	ObjectTypeTag  = "object_type"
+	ObjectCountTag = "object_count"
+	ObjectTypeQA   = "QA"
 )
 
 var (
@@ -327,12 +329,21 @@ func (r *KnowledgeBaseReconciler) reconcileFileGroup(ctx context.Context, log lo
 			continue
 		}
 		fileDetail.Checksum = objectStat.ETag
+
 		tags, err := ds.GetTags(ctx, info)
 		if err != nil {
 			errs = append(errs, err)
 			fileDetail.UpdateErr(err, arcadiav1alpha1.FileProcessPhaseFailed)
 			continue
 		}
+
+		// File Size in string
+		fileDetail.Size = utils.BytesToSize(objectStat.Size)
+		// File Type in string
+		fileDetail.Type = tags[ObjectTypeTag]
+		// File data count in string
+		fileDetail.Count = tags[ObjectCountTag]
+
 		file, err := ds.ReadFile(ctx, info)
 		if err != nil {
 			errs = append(errs, err)

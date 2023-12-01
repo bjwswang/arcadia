@@ -47,6 +47,8 @@ var (
 
 func versionedDataset2model(obj *unstructured.Unstructured) (*generated.VersionedDataset, error) {
 	vds := &generated.VersionedDataset{}
+	id := string(obj.GetUID())
+	vds.ID = &id
 	vds.Name = obj.GetName()
 	vds.Namespace = obj.GetNamespace()
 	if r := obj.GetLabels(); len(r) > 0 {
@@ -69,7 +71,7 @@ func versionedDataset2model(obj *unstructured.Unstructured) (*generated.Versione
 	}
 	vds.CreationTimestamp = obj.GetCreationTimestamp().Time
 	vds.Creator = &versioneddataset.Spec.Creator
-	vds.DisplayName = versioneddataset.Spec.DisplayName
+	vds.DisplayName = &versioneddataset.Spec.DisplayName
 	vds.Description = &versioneddataset.Spec.Description
 	vds.Dataset = generated.TypedObjectReference{
 		APIGroup:  versioneddataset.Spec.Dataset.APIGroup,
@@ -189,7 +191,7 @@ func ListVersionedDatasets(ctx context.Context, c dynamic.Interface, input *gene
 	result := make([]generated.PageNode, 0)
 	for _, u := range list.Items {
 		uu, _ := versionedDataset2model(&u)
-		if input.DisplayName != nil && uu.DisplayName != *input.DisplayName {
+		if input.DisplayName != nil && *uu.DisplayName != *input.DisplayName {
 			continue
 		}
 		if input.Keyword != nil {
@@ -199,7 +201,7 @@ func ListVersionedDatasets(ctx context.Context, c dynamic.Interface, input *gene
 			if strings.Contains(uu.Namespace, *input.Keyword) {
 				goto add
 			}
-			if strings.Contains(uu.DisplayName, *input.Keyword) {
+			if strings.Contains(*uu.DisplayName, *input.Keyword) {
 				goto add
 			}
 			for _, v := range uu.Annotations {
@@ -280,7 +282,7 @@ func UpdateVersionedDataset(ctx context.Context, c dynamic.Interface, input *gen
 	}
 	displayname, _, _ := unstructured.NestedString(obj.Object, "spec", "displayName")
 	description, _, _ := unstructured.NestedString(obj.Object, "spec", "description")
-	if input.DisplayName != "" && input.DisplayName != displayname {
+	if input.DisplayName != nil && *input.DisplayName != displayname {
 		_ = unstructured.SetNestedField(obj.Object, input.DisplayName, "spec", "displayName")
 	}
 	if input.Description != nil && *input.Description != description {
@@ -324,9 +326,9 @@ func CreateVersionedDataset(ctx context.Context, c dynamic.Interface, input *gen
 			Namespace: &input.Namespace,
 		},
 		Released: 0,
-		CommonSpec: v1alpha1.CommonSpec{
-			DisplayName: input.DisplayName,
-		},
+	}
+	if input.DisplayName != nil {
+		vds.Spec.DisplayName = *input.DisplayName
 	}
 	if input.Description != nil {
 		vds.Spec.Description = *input.Description

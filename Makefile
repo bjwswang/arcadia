@@ -254,14 +254,22 @@ gql-gen:
 build-graphql-server: gql-gen
 	@CGO_ENABLED=0 GOOS=linux go build -o bin/graphql-server graphql-server/go-server/main.go
 run-graphql-server:
-	POD_NAMESPACE=arcadia go run graphql-server/go-server/main.go --enable-playground=true &
+	POD_NAMESPACE=arcadia go run graphql-server/go-server/main.go \
+	--enable-playground --port=8081 \
+    --playground-endpoint-prefix=kubeagi-apis \
+    --enable-oidc \
+    --client-id=bff-client --client-secret=61324af0-1234-4f61-b110-ef57013267d6 \
+    --master-url=https://k8s.172.22.96.136.nip.io \
+    --issuer-url=https://portal.172.22.96.136.nip.io/oidc \
+    --data-processing-url=http://arcadia-dataprocess.arcadia.svc.cluster.local:28888 \
+    > graphql-server.log 2>&1 &
 
 # sdk for graphql-server api
-GRL_SDK_GENERATOR_IMAGE ?= kubebb/gql-sdk-generator
+GRL_SDK_GENERATOR_IMAGE ?= yuntijs/gql-sdk-generator:latest
+GRAPH_API_ENDPOINT ?= http://0.0.0.0:8888/bff
 .PHONY: gql-sdk-generator
-gql-sdk-generator: run-graphql-server
-	docker run -v $(shell pwd)/graphql-server/go-server/graph/schema:/schema ${GRL_SDK_GENERATOR_IMAGE}:main
-
+gql-sdk-generator:
+	docker run --rm --net=host --env SDK_PACKAGE_NAME=@yuntijs/arcadia-bff-sdk --env SDK_YUNTI_NAME=ArcadiaBffSDK --env GRAPH_API_ENDPOINT=${GRAPH_API_ENDPOINT} -v $(shell pwd)/graphql-server/go-server/graph/schema:/schema -v ~/.npmrc:/root/.npmrc ${GRL_SDK_GENERATOR_IMAGE}
 
 # prepare for git push
 .PHONY: prepare-push
