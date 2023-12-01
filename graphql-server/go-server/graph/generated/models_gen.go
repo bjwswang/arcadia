@@ -506,6 +506,10 @@ type F struct {
 	Count *int `json:"count,omitempty"`
 	// 文件成功导入时间，如果没有导入成功，这个字段为空
 	Time *time.Time `json:"time,omitempty"`
+	// 文件大小
+	Size *int64 `json:"size,omitempty"`
+	// 文件创建时间
+	CreationTimestamp *time.Time `json:"creationTimestamp,omitempty"`
 }
 
 func (F) IsPageNode() {}

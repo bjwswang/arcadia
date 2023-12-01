@@ -128,9 +128,15 @@ func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.Ver
 				Path:  strings.TrimPrefix(obj.Key, prefix),
 				Count: &dataCount,
 				Time:  &obj.LastModified,
+				Size:  &obj.Size,
 			}
-			if v, ok := obj.UserMetadata["content-type"]; ok {
+			if v, ok := obj.UserMetadata[minio.FileContentType]; ok {
 				tf.FileType = v
+			}
+			if v, ok := obj.UserTags[minio.CreationTimestamp]; ok {
+				if now, err := time.Parse(time.RFC3339, v); err == nil {
+					tf.CreationTimestamp = &now
+				}
 			}
 			result = append(result, tf)
 		}

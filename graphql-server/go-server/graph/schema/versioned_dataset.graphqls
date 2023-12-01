@@ -1,3 +1,4 @@
+scalar Int64
 """
 VersionedDataset
 数据集的版本信息。
@@ -68,8 +69,14 @@ type F {
     """数据量"""
     count: Int
 
-    """文件成功导入时间，如果没有导入成功，这个字段为空"""
+    """文件更新时间，如果没有导入成功，这个字段为空"""
     time: Time
+
+    """文件大小"""
+    size: Int64
+
+    """文件创建时间"""
+    creationTimestamp: Time    
 }
 
 """

@@ -245,10 +245,12 @@ type ComplexityRoot struct {
 	}
 
 	F struct {
-		Count    func(childComplexity int) int
-		FileType func(childComplexity int) int
-		Path     func(childComplexity int) int
-		Time     func(childComplexity int) int
+		Count             func(childComplexity int) int
+		CreationTimestamp func(childComplexity int) int
+		FileType          func(childComplexity int) int
+		Path              func(childComplexity int) int
+		Size              func(childComplexity int) int
+		Time              func(childComplexity int) int
 	}
 
 	KnowledgeBase struct {
@@ -1395,6 +1397,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.F.Count(childComplexity), true
 
+	case "F.creationTimestamp":
+		if e.complexity.F.CreationTimestamp == nil {
+			break
+		}
+
+		return e.complexity.F.CreationTimestamp(childComplexity), true
+
 	case "F.fileType":
 		if e.complexity.F.FileType == nil {
 			break
@@ -1408,6 +1417,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.F.Path(childComplexity), true
+
+	case "F.size":
+		if e.complexity.F.Size == nil {
+			break
+		}
+
+		return e.complexity.F.Size(childComplexity), true
 
 	case "F.time":
 		if e.complexity.F.Time == nil {
@@ -3466,7 +3482,8 @@ extend type Mutation {
 extend type Query {
     Model: ModelQuery
 }`, BuiltIn: false},
-	{Name: "../schema/versioned_dataset.graphqls", Input: `"""
+	{Name: "../schema/versioned_dataset.graphqls", Input: `scalar Int64
+"""
 VersionedDataset
 数据集的版本信息。
 主要记录版本名字，数据的来源，以及文件的同步状态
@@ -3538,6 +3555,12 @@ type F {
 
     """文件成功导入时间，如果没有导入成功，这个字段为空"""
     time: Time
+
+    """文件大小"""
+    size: Int64
+
+    """文件创建时间"""
+    creationTimestamp: Time    
 }
 
 """
@@ -9875,6 +9898,88 @@ func (ec *executionContext) _F_time(ctx context.Context, field graphql.Collected
 }
 
 func (ec *executionContext) fieldContext_F_time(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "F",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _F_size(ctx context.Context, field graphql.CollectedField, obj *F) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_F_size(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Size, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int64)
+	fc.Result = res
+	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_F_size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "F",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _F_creationTimestamp(ctx context.Context, field graphql.CollectedField, obj *F) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_F_creationTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreationTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_F_creationTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "F",
 		Field:      field,
@@ -21047,6 +21152,10 @@ func (ec *executionContext) _F(ctx context.Context, sel ast.SelectionSet, obj *F
 			out.Values[i] = ec._F_count(ctx, field, obj)
 		case "time":
 			out.Values[i] = ec._F_time(ctx, field, obj)
+		case "size":
+			out.Values[i] = ec._F_size(ctx, field, obj)
+		case "creationTimestamp":
+			out.Values[i] = ec._F_creationTimestamp(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -24193,6 +24302,22 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 		return graphql.Null
 	}
 	res := graphql.MarshalInt(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOInt642ᚖint64(ctx context.Context, v interface{}) (*int64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt64(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt642ᚖint64(ctx context.Context, sel ast.SelectionSet, v *int64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalInt64(*v)
 	return res
 }
 

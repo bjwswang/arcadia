@@ -470,7 +470,8 @@ func newMultiPartUpload(ctx context.Context, bucketName, bucktPath, fileName str
 
 	return minioClient.NewMultipartUpload(ctx, bucketName, objectName, minio.PutObjectOptions{
 		UserTags: map[string]string{
-			"size": fmt.Sprintf("%d", size),
+			"creationTimestamp": time.Now().Format(time.RFC3339),
+			"size":              fmt.Sprintf("%d", size),
 		},
 	})
 }
