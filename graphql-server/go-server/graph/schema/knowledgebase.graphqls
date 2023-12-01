@@ -39,6 +39,11 @@ type filedetail{
     size: String!
 
     """
+    最新处理时间
+    """
+    updateTimestamp: Time
+
+    """
     文件处理的阶段
     规则: enum { Pending , Processing , Succeeded, Failed, Skipped}
     """

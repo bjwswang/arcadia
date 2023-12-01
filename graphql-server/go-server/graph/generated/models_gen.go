@@ -950,6 +950,8 @@ type Filedetail struct {
 	Count string `json:"count"`
 	// 文件大小
 	Size string `json:"size"`
+	// 最新处理时间
+	UpdateTimestamp *time.Time `json:"updateTimestamp,omitempty"`
 	// 文件处理的阶段
 	// 规则: enum { Pending , Processing , Succeeded, Failed, Skipped}
 	Phase string `json:"phase"`

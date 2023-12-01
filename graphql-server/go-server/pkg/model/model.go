@@ -29,6 +29,7 @@ import (
 
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
 	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
+	"github.com/kubeagi/arcadia/pkg/utils"
 )
 
 func obj2model(obj *unstructured.Unstructured) *generated.Model {
@@ -53,7 +54,7 @@ func obj2model(obj *unstructured.Unstructured) *generated.Model {
 		condition, ok := conditions[0].(map[string]interface{})
 		if ok {
 			timeStr, _ := condition["lastTransitionTime"].(string)
-			updateTime, _ = time.Parse(time.RFC3339, timeStr)
+			updateTime, _ = utils.RFC3339Time(timeStr)
 			status, _ = condition["status"].(string)
 		}
 	} else {

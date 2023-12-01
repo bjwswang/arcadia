@@ -30,6 +30,7 @@ import (
 
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
 	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
+	"github.com/kubeagi/arcadia/pkg/utils"
 )
 
 func knowledgebase2model(obj *unstructured.Unstructured) *generated.KnowledgeBase {
@@ -66,12 +67,20 @@ func knowledgebase2model(obj *unstructured.Unstructured) *generated.KnowledgeBas
 			size, _ := detail["size"].(string)
 			path, _ := detail["path"].(string)
 			phase, _ := detail["phase"].(string)
+
+			var updateTime time.Time
+			lastUpdateTime, ok := detail["lastUpdateTime"].(string)
+			if ok {
+				updateTime, _ = utils.RFC3339Time(lastUpdateTime)
+			}
+
 			filedetail := &generated.Filedetail{
-				Type:  fileType,
-				Count: count,
-				Size:  size,
-				Path:  path,
-				Phase: phase,
+				Type:            fileType,
+				Count:           count,
+				Size:            size,
+				Path:            path,
+				Phase:           phase,
+				UpdateTimestamp: &updateTime,
 			}
 			filedetails = append(filedetails, filedetail)
 		}
@@ -92,7 +101,7 @@ func knowledgebase2model(obj *unstructured.Unstructured) *generated.KnowledgeBas
 		condition, ok := conditions[0].(map[string]interface{})
 		if ok {
 			timeStr, _ := condition["lastTransitionTime"].(string)
-			updateTime, _ = time.Parse(time.RFC3339, timeStr)
+			updateTime, _ = utils.RFC3339Time(timeStr)
 			status, _ = condition["status"].(string)
 		}
 	} else {
