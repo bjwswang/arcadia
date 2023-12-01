@@ -124,12 +124,15 @@ func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.Ver
 	result := make([]generated.PageNode, 0)
 	for _, obj := range objectInfoList {
 		if keyword == "" || strings.Contains(obj.Key, keyword) {
-			result = append(result, generated.F{
-				Path:     strings.TrimPrefix(obj.Key, prefix),
-				FileType: obj.ContentType,
-				Count:    &dataCount,
-				Time:     &obj.LastModified,
-			})
+			tf := generated.F{
+				Path:  strings.TrimPrefix(obj.Key, prefix),
+				Count: &dataCount,
+				Time:  &obj.LastModified,
+			}
+			if v, ok := obj.UserMetadata["content-type"]; ok {
+				tf.FileType = v
+			}
+			result = append(result, tf)
 		}
 	}
 	page, size := 1, 10

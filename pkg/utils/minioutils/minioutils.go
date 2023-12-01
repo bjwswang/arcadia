@@ -53,7 +53,8 @@ func ListObjectCompleteInfo(ctx context.Context, bucket, prefix string, client *
 		nq := make([]string, 0)
 		for _, p := range q {
 			objList := client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
-				Prefix: p,
+				Prefix:       p,
+				WithMetadata: true,
 			})
 			for key := range objList {
 				if strings.HasSuffix(key.Key, "/") {

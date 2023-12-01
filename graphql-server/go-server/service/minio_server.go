@@ -166,7 +166,7 @@ func (m *minioAPI) NewMultipart(ctx *gin.Context) {
 	var (
 		uploadID    string
 		totalChunks int
-		size        int64
+		size        uint64
 	)
 	totalChunksStr := ctx.Query("totalChunkCounts")
 	_, err := fmt.Sscanf(totalChunksStr, "%d", &totalChunks)
@@ -223,7 +223,7 @@ func (m *minioAPI) NewMultipart(ctx *gin.Context) {
 
 	bucket := ctx.Query(bucketQuery)
 	bucketPath := ctx.Query(bucketPathQuery)
-	uploadID, err = newMultiPartUpload(ctx.Request.Context(), bucket, bucketPath, fileName)
+	uploadID, err = newMultiPartUpload(ctx.Request.Context(), bucket, bucketPath, fileName, size)
 	if err != nil {
 		klog.Errorf("failed to generate uploadid error %s", err)
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -234,7 +234,7 @@ func (m *minioAPI) NewMultipart(ctx *gin.Context) {
 	if _, err = models.InsetFileChunk(&models.FileChunk{
 		UploadID:    uploadID,
 		Md5:         md5,
-		Size:        size,
+		Size:        int64(size), // maybe need to change to uint64
 		FileName:    fileName,
 		TotalChunks: totalChunks,
 		Bucket:      bucket,
@@ -327,13 +327,26 @@ func (m *minioAPI) GetMultipartUploadURL(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
+type CompleteBody struct {
+	MD5        string `json:"md5"`
+	BucketPath string `json:"bucket_path"`
+	Bucket     string `json:"bucket"`
+	FileName   string `json:"file_name"`
+	Size       uint64 `json:"size"`
+	UploadID   string `json:"uploadID"`
+}
+
 // CompleteMultipart why use form-data, compatible with front-end
 func (m *minioAPI) CompleteMultipart(ctx *gin.Context) {
-	md5 := ctx.PostForm(md5Query)
-	uploadID := ctx.PostForm("uploadID")
-	bucket := ctx.PostForm(bucketQuery)
-	bucketPath := ctx.PostForm(bucketPathQuery)
-	fileChunk, err := models.GetFileChunkByMD5(bucket, bucketPath, md5)
+	var body CompleteBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		klog.Errorf("failed to parse body error %s", err)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "need content-type application/json",
+		})
+		return
+	}
+	fileChunk, err := models.GetFileChunkByMD5(body.Bucket, body.BucketPath, body.MD5)
 	if err != nil {
 		klog.Errorf("failed to get file chunk error %s", err)
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -342,7 +355,7 @@ func (m *minioAPI) CompleteMultipart(ctx *gin.Context) {
 		return
 	}
 
-	_, err = completeMultiPartUpload(ctx.Request.Context(), bucket, bucketPath, uploadID, fileChunk.FileName)
+	_, err = completeMultiPartUpload(ctx.Request.Context(), body.Bucket, body.BucketPath, body.UploadID, fileChunk.FileName)
 	if err != nil {
 		klog.Errorf("complte multipart error %s", err)
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -446,7 +459,7 @@ func isObjectExist(ctx context.Context, bucketName string, objectName string) (b
 	return isExist, nil
 }
 
-func newMultiPartUpload(ctx context.Context, bucketName, bucktPath, fileName string) (string, error) {
+func newMultiPartUpload(ctx context.Context, bucketName, bucktPath, fileName string, size uint64) (string, error) {
 	_, minioClient, err := minio1.GetClients()
 	if err != nil {
 		klog.Errorf("getClient failed: %s", err)
@@ -455,7 +468,11 @@ func newMultiPartUpload(ctx context.Context, bucketName, bucktPath, fileName str
 
 	objectName := fmt.Sprintf("%s/%s", bucktPath, fileName)
 
-	return minioClient.NewMultipartUpload(ctx, bucketName, objectName, minio.PutObjectOptions{})
+	return minioClient.NewMultipartUpload(ctx, bucketName, objectName, minio.PutObjectOptions{
+		UserTags: map[string]string{
+			"size": fmt.Sprintf("%d", size),
+		},
+	})
 }
 
 func genMultiPartSignedURL(ctx context.Context, bucket, bucketPath string, uploadID string, partNumber int, fileName string, partSize int64) (string, error) {
@@ -516,29 +533,24 @@ func RegisterMinIOAPI(e *gin.Engine, conf config.ServerConfig) {
 
 	group.GET("/model/files/get_chunks", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetSuccessChunks)
 	group.GET("/versioneddataset/files/get_chunks", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "versioneddatasets"), api.GetSuccessChunks)
-    group.GET("get_chunks", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetSuccessChunks)
-
+	group.GET("get_chunks", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetSuccessChunks)
 
 	// POST
 	group.GET("/model/files/new_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.NewMultipart)
 	group.GET("/versioneddataset/files/new_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "versioneddatasets"), api.NewMultipart)
-    group.GET("new_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.NewMultipart)
-
+	group.GET("new_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.NewMultipart)
 
 	group.GET("/model/files/get_multipart_url", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetMultipartUploadURL)
 	group.GET("/versioneddataset/files/get_multipart_url", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "versioneddatasets"), api.GetMultipartUploadURL)
-    group.GET("get_multipart_url", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetMultipartUploadURL)
-
+	group.GET("get_multipart_url", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "get", "models"), api.GetMultipartUploadURL)
 
 	group.POST("/model/files/update_chunk", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "update", "models"), api.UpdateMultipart)
 	group.POST("/versioneddataset/files/update_chunk", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "update", "versioneddatasets"), api.UpdateMultipart)
-    group.POST("update_chunk", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "update", "models"), api.UpdateMultipart)
-
+	group.POST("update_chunk", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "update", "models"), api.UpdateMultipart)
 
 	group.POST("/model/files/complete_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "create", "models"), api.CompleteMultipart)
 	group.POST("/versioneddataset/files/complete_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "create", "versioneddatasets"), api.CompleteMultipart)
-    group.POST("complete_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "create", "models"), api.CompleteMultipart)
-
+	group.POST("complete_multipart", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "create", "models"), api.CompleteMultipart)
 
 	group.DELETE("/model/files/delete_files", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "delete", "models"), api.DeleteFiles)
 	group.DELETE("/versioneddataset/files/delete_files", auth.AuthInterceptor(conf.EnableOIDC, oidc.Verifier, "delete", "versioneddatasets"), api.DeleteFiles)
