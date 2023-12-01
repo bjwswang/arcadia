@@ -109,7 +109,7 @@ func AuthInterceptor(needAuth bool, oidcVerifier *oidc.IDTokenVerifier, verb, re
 		namespace := ctx.GetHeader("namespace")
 		ok, rawToken := isBearerToken(rawToken)
 		if !ok {
-			ctx.JSON(http.StatusUnauthorized, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"message": "unauthorized",
 			})
 			return
@@ -117,7 +117,7 @@ func AuthInterceptor(needAuth bool, oidcVerifier *oidc.IDTokenVerifier, verb, re
 
 		oidcIDtoken, err := oidcVerifier.Verify(context.TODO(), rawToken)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"message": "illegal token",
 			})
 			return
@@ -126,7 +126,7 @@ func AuthInterceptor(needAuth bool, oidcVerifier *oidc.IDTokenVerifier, verb, re
 		// Use operator permissions to determine if a user has permission to perform an operation.
 		client, err := client1.GetClient(nil)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"message": "can't connect to cluster",
 			})
 			return
@@ -134,13 +134,13 @@ func AuthInterceptor(needAuth bool, oidcVerifier *oidc.IDTokenVerifier, verb, re
 		if verb != "" {
 			allowed, err := cani(client, oidcIDtoken, resources, verb, namespace)
 			if err != nil {
-				ctx.JSON(http.StatusInsufficientStorage, gin.H{
+				ctx.AbortWithStatusJSON(http.StatusInsufficientStorage, gin.H{
 					"message": "some error occurred in checking the permissions",
 				})
 				return
 			}
 			if !allowed {
-				ctx.JSON(http.StatusForbidden, gin.H{
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 					"message": "you do not have permission to perform this operation. Please check the permissions.",
 				})
 				return
