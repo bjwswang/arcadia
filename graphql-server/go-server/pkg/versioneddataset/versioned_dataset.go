@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	minio1 "github.com/kubeagi/arcadia/graphql-server/go-server/pkg/minio"
 )
 
 var (
@@ -108,7 +109,7 @@ func versionedDataset2model(obj *unstructured.Unstructured) (*generated.Versione
 
 func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.VersionedDataset, filter *generated.FileFilter) (*generated.PaginatedResult, error) {
 	prefix := fmt.Sprintf("dataset/%s/%s/", input.Dataset.Name, input.Version)
-	minioClient, _, err := minio.GetClients()
+	minioClient, _, err := minio1.GetClients()
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.Ver
 	if filter != nil && filter.Keyword != nil {
 		keyword = *filter.Keyword
 	}
-	objectInfoList := minioutils.ListObjectCompleteInfo(ctx, input.Namespace, prefix, minioClient, -1)
+	objectInfoList := minioutils.ListObjectCompleteInfo(ctx, input.Namespace, prefix, minioClient)
 	sort.Slice(objectInfoList, func(i, j int) bool {
 		return objectInfoList[i].LastModified.After(objectInfoList[j].LastModified)
 	})

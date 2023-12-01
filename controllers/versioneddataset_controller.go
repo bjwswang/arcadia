@@ -36,6 +36,7 @@ import (
 	"github.com/kubeagi/arcadia/pkg/datasource"
 	"github.com/kubeagi/arcadia/pkg/scheduler"
 	"github.com/kubeagi/arcadia/pkg/utils"
+	"github.com/minio/minio-go/v7"
 )
 
 // VersionedDatasetReconciler reconciles a VersionedDataset object
@@ -72,6 +73,15 @@ func (r *VersionedDatasetReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		klog.Errorf("reconcile: failed to get versionDataset with req: %v", req.NamespacedName)
 		return reconcile.Result{}, err
 	}
+	if instance.DeletionTimestamp != nil {
+		klog.Infof("delete versioneddatset %s/%s ", instance.Name, instance.Namespace)
+		if err = r.removeBucketFiles(ctx, instance); err != nil {
+			return reconcile.Result{}, err
+		}
+		instance.Finalizers = nil
+		return reconcile.Result{}, r.Client.Update(ctx, instance)
+	}
+
 	if instance.DeletionTimestamp == nil {
 		updatedObj, err := r.preUpdate(ctx, instance)
 		if err != nil {
@@ -211,4 +221,30 @@ func (r *VersionedDatasetReconciler) checkStatus(ctx context.Context, instance *
 
 	update, deleteFileStatus := v1alpha1.CopyedFileGroup2Status(oss.Client, instance)
 	return update, deleteFileStatus, nil
+}
+
+func (r *VersionedDatasetReconciler) removeBucketFiles(ctx context.Context, instance *v1alpha1.VersionedDataset) error {
+	systemDatasource, err := config.GetSystemDatasource(ctx, r.Client)
+	if err != nil {
+		klog.Errorf("get system datasource error %s", err)
+		return err
+	}
+	endpoint := systemDatasource.Spec.Enpoint.DeepCopy()
+	if endpoint.AuthSecret != nil && endpoint.AuthSecret.Namespace == nil {
+		endpoint.AuthSecret.WithNameSpace(systemDatasource.Namespace)
+	}
+	oss, err := datasource.NewOSS(ctx, r.Client, endpoint)
+	if err != nil {
+		klog.Errorf("generate new minio client error %s", err)
+		return err
+	}
+
+	for ei := range oss.Client.RemoveObjects(ctx, instance.Namespace, oss.Client.ListObjects(ctx, instance.Namespace, minio.ListObjectsOptions{
+		Prefix:    fmt.Sprintf("dataset/%s/%s/", instance.Spec.Dataset.Name, instance.Spec.Version),
+		Recursive: true,
+	}), minio.RemoveObjectsOptions{}) {
+		err = ei.Err
+		klog.Errorf("failed to remove object %s erorr %v", ei.ObjectName, ei.Err)
+	}
+	return err
 }
