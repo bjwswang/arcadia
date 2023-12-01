@@ -32,7 +32,7 @@ import (
 
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
 	"github.com/kubeagi/arcadia/graphql-server/go-server/graph/generated"
-	"github.com/kubeagi/arcadia/graphql-server/go-server/pkg/minio"
+	minio1 "github.com/kubeagi/arcadia/graphql-server/go-server/pkg/minio"
 	"github.com/kubeagi/arcadia/pkg/utils/minioutils"
 )
 
@@ -108,7 +108,7 @@ func versionedDataset2model(obj *unstructured.Unstructured) (*generated.Versione
 
 func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.VersionedDataset, filter *generated.FileFilter) (*generated.PaginatedResult, error) {
 	prefix := fmt.Sprintf("dataset/%s/%s/", input.Dataset.Name, input.Version)
-	minioClient, _, err := minio.GetClients()
+	minioClient, _, err := minio1.GetClients()
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.Ver
 	if filter != nil && filter.Keyword != nil {
 		keyword = *filter.Keyword
 	}
-	objectInfoList := minioutils.ListObjectCompleteInfo(ctx, input.Namespace, prefix, minioClient, -1)
+	objectInfoList := minioutils.ListObjectCompleteInfo(ctx, input.Namespace, prefix, minioClient)
 	sort.Slice(objectInfoList, func(i, j int) bool {
 		return objectInfoList[i].LastModified.After(objectInfoList[j].LastModified)
 	})
@@ -130,10 +130,10 @@ func VersionFiles(ctx context.Context, c dynamic.Interface, input *generated.Ver
 				Time:  &obj.LastModified,
 				Size:  &obj.Size,
 			}
-			if v, ok := obj.UserMetadata[minio.FileContentType]; ok {
+			if v, ok := obj.UserMetadata[minio1.FileContentType]; ok {
 				tf.FileType = v
 			}
-			if v, ok := obj.UserTags[minio.CreationTimestamp]; ok {
+			if v, ok := obj.UserTags[minio1.CreationTimestamp]; ok {
 				if now, err := time.Parse(time.RFC3339, v); err == nil {
 					tf.CreationTimestamp = &now
 				}
