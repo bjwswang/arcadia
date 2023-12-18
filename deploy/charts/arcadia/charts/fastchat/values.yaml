@@ -35,11 +35,6 @@ ingress:
         - path: /
           port: 8000
           pathType: ImplementationSpecific
-    - host: controller.fastchat.arcadia.com
-      paths:
-        - path: /
-          port: 21001
-          pathType: ImplementationSpecific
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
