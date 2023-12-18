@@ -2,7 +2,7 @@ name: Integration tests
 on:
   push:
     branches:
-      - 'main'
+      - 'chore'
       - 'release-*'
       - 'v*'
       - 'master'

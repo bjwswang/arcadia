@@ -3,7 +3,7 @@ name: KubeagiTests
 on:
   push:
     branches: 
-      - 'main'
+      - 'chore'
   pull_request:
     branches: [main]
   workflow_dispatch:
