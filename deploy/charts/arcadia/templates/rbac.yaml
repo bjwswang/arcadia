@@ -420,6 +420,14 @@ rules:
   - patch
   - update
 - apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - chain.arcadia.kubeagi.k8s.com.cn
+- apiGroups:
   - chain.arcadia.kubeagi.k8s.com.cn
   resources:
   - llmchains
