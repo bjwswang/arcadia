@@ -300,6 +300,18 @@ prepare-push: manifests generate fmt vet gql-gen
 	@go install github.com/swaggo/swag/cmd/swag@latest
 	@swag init -o apiserver/docs .
 
+PYTHON_INDEX_URL ?=https://pypi.mirrors.ustc.edu.cn/simple/
+.PHONY: prepare-push-pypi
+prepare-push-pypi:
+	@echo "install black"
+	@pip install pylint black isort -i ${PYTHON_INDEX_URL}
+	@echo "format python code"
+	@black ./pypi/**/*.py
+	@echo "sort python imports"
+	@isort ./pypi/**/*.py
+	@echo "run pylint"
+	@pylint --rcfile ./.pylintrc ./pypi/data-processing/**/*.py
+
 # Commands for Data-Processing
 DATA_PROCESSING_IMAGE ?= kubebb/dp-base
 

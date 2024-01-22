@@ -29,47 +29,50 @@ from database_clients import postgresql_pool_client
 from utils import log_utils, sanic_utils
 
 # Initialize the log config
-log_utils.init_config(
-    source_type='manipulate_server',
-    log_dir="log"
-)
+log_utils.init_config(source_type="manipulate_server", log_dir="log")
 
-logger = logging.getLogger('manipulate_server')
+logger = logging.getLogger("manipulate_server")
 
-app = Sanic(name='data_manipulate')
+app = Sanic(name="data_manipulate")
 CORS(app)
 app.error_handler = sanic_utils.CustomErrorHandler()
 
 
-@app.middleware('request')
+@app.middleware("request")
 async def request_start_time_middleware(request):
     """Middleware to record request start time and status code"""
     request.ctx.start_time = time.time()
 
 
-@app.middleware('response')
+@app.middleware("response")
 async def request_processing_time_middleware(request, response):
     """Middleware to calculate and log request processing time and status code"""
     processing_time = time.time() - request.ctx.start_time
-    logger.debug(''.join([
-        f"{log_tag_const.WEB_SERVER_ACCESS} {request.method.lower()} {request.url} "
-        f"{response.status} {processing_time:.4f} seconds"
-    ]))
+    logger.debug(
+        "".join(
+            [
+                f"{log_tag_const.WEB_SERVER_ACCESS} {request.method.lower()} {request.url} "
+                f"{response.status} {processing_time:.4f} seconds"
+            ]
+        )
+    )
     return response
 
 
-@app.listener('before_server_start')
+@app.listener("before_server_start")
 async def init_web_server(app, loop):
-    app.config['REQUEST_MAX_SIZE'] = 1024 * 1024 * 1024  # 1G
-    app.config['REQUEST_TIMEOUT'] = 60 * 60 * 60
-    app.config['RESPONSE_TIMEOUT'] = 60 * 60 * 60
-    app.config['KEEP_ALIVE_TIMEOUT'] = 60 * 60 * 60
-    app.config['conn_pool'] = postgresql_pool_client.get_pool(_create_database_connection)
+    app.config["REQUEST_MAX_SIZE"] = 1024 * 1024 * 1024  # 1G
+    app.config["REQUEST_TIMEOUT"] = 60 * 60 * 60
+    app.config["RESPONSE_TIMEOUT"] = 60 * 60 * 60
+    app.config["KEEP_ALIVE_TIMEOUT"] = 60 * 60 * 60
+    app.config["conn_pool"] = postgresql_pool_client.get_pool(
+        _create_database_connection
+    )
 
 
-@app.listener('after_server_stop')
+@app.listener("after_server_stop")
 async def shutdown_web_server(app, loop):
-    postgresql_pool_client.release_pool(app.config['conn_pool'])
+    postgresql_pool_client.release_pool(app.config["conn_pool"])
 
 
 app.blueprint(data_process_controller.data_process)
@@ -78,19 +81,13 @@ app.blueprint(data_process_controller.data_process)
 def _create_database_connection():
     """Create a database connection."""
     return psycopg2.connect(
-                host=config.pg_host, 
-                port=config.pg_port,
-                user=config.pg_user,
-                password=config.pg_password, 
-                database=config.pg_database
-            )
+        host=config.pg_host,
+        port=config.pg_port,
+        user=config.pg_user,
+        password=config.pg_password,
+        database=config.pg_database,
+    )
 
 
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0',
-            port=28888,
-            access_log=False,
-            debug=False,
-            workers=2)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=28888, access_log=False, debug=False, workers=2)

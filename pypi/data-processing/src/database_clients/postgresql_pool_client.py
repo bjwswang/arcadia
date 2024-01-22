@@ -32,7 +32,7 @@ def get_pool(connection_creator):
         maxcached=8,
         maxshared=8,
         maxconnections=8,
-        blocking=True
+        blocking=True,
     )
 
 
@@ -40,10 +40,13 @@ def release_pool(pool):
     """Release the database connection pool."""
     if pool is not None:
         pool.close()
-        logger.debug(f"{log_tag_const.DATABASE_POSTGRESQL} Release the database connection pool.")
+        logger.debug(
+            f"{log_tag_const.DATABASE_POSTGRESQL} Release the database connection pool."
+        )
     else:
-        logger.debug(f"{log_tag_const.DATABASE_POSTGRESQL} The database connection pool is None.")
-    
+        logger.debug(
+            f"{log_tag_const.DATABASE_POSTGRESQL} The database connection pool is None."
+        )
 
 
 def get_connection_from_pool(pool):
@@ -52,10 +55,9 @@ def get_connection_from_pool(pool):
     return pool.connection()
 
 
-
 def execute_query(pool, sql, params={}):
     """Execute a query with the parameters."""
-    error = ''
+    error = ""
     data = []
     try:
         with pool.connection() as conn:
@@ -72,29 +74,25 @@ def execute_query(pool, sql, params={}):
     except Exception as ex:
         error = str(ex)
         data = None
-        logger.error(''.join([
-            f"{log_tag_const.DATABASE_POSTGRESQL} Executing the sql failed\n {sql} \n",
-            f"The error is: \n{error}\n",
-            f"The tracing error is: \n{traceback.format_exc()}\n"
-        ]))
-         
-    if len(error) > 0:
-        return {
-            'status': 400,
-            'message': error,
-            'data': traceback.format_exc()
-        }
-    
-    return {
-        'status': 200,
-        'message': '',
-        "data": data
-    }
+        logger.error(
+            "".join(
+                [
+                    f"{log_tag_const.DATABASE_POSTGRESQL} Executing the sql failed\n {sql} \n",
+                    f"The error is: \n{error}\n",
+                    f"The tracing error is: \n{traceback.format_exc()}\n",
+                ]
+            )
+        )
 
-    
+    if len(error) > 0:
+        return {"status": 400, "message": error, "data": traceback.format_exc()}
+
+    return {"status": 200, "message": "", "data": data}
+
+
 def execute_count_query(pool, sql, params={}):
     """Execute a count query with the parameters."""
-    error = ''
+    error = ""
     data = None
     try:
         with pool.connection() as conn:
@@ -104,29 +102,25 @@ def execute_count_query(pool, sql, params={}):
     except Exception as ex:
         error = str(ex)
         data = None
-        logger.error(''.join([
-            f"{log_tag_const.DATABASE_POSTGRESQL} Executing the count sql failed\n {sql} \n",
-            f"\nThe error is: \n{error}\n",
-            f"The tracing error is: \n{traceback.format_exc()}\n"
-        ]))
-         
+        logger.error(
+            "".join(
+                [
+                    f"{log_tag_const.DATABASE_POSTGRESQL} Executing the count sql failed\n {sql} \n",
+                    f"\nThe error is: \n{error}\n",
+                    f"The tracing error is: \n{traceback.format_exc()}\n",
+                ]
+            )
+        )
+
     if len(error) > 0:
-        return {
-            'status': 400,
-            'message': error,
-            'data': traceback.format_exc()
-        }
-    
-    return {
-        'status': 200,
-        'message': '',
-        "data": data
-    }
+        return {"status": 400, "message": error, "data": traceback.format_exc()}
+
+    return {"status": 200, "message": "", "data": data}
 
 
 def execute_update(pool, sql, params={}):
     """Execute a update with the parameters."""
-    error = ''
+    error = ""
     data = None
     try:
         with pool.connection() as conn:
@@ -137,23 +131,17 @@ def execute_update(pool, sql, params={}):
         error = str(ex)
         data = None
         conn.rollback()
-        logger.error(''.join([
-            f"{log_tag_const.DATABASE_POSTGRESQL} Executing the update sql failed\n {sql} \n",
-            f"\nThe error is: \n{error}\n",
-            f"The tracing error is: \n{traceback.format_exc()}\n"
-        ]))
-         
+        logger.error(
+            "".join(
+                [
+                    f"{log_tag_const.DATABASE_POSTGRESQL} Executing the update sql failed\n {sql} \n",
+                    f"\nThe error is: \n{error}\n",
+                    f"The tracing error is: \n{traceback.format_exc()}\n",
+                ]
+            )
+        )
+
     if len(error) > 0:
-        return {
-            'status': 400,
-            'message': error,
-            'data': traceback.format_exc()
-        }
-    
-    return {
-        'status': 200,
-        'message': '处理成功',
-        "data": data
-    }
+        return {"status": 400, "message": error, "data": traceback.format_exc()}
 
-
+    return {"status": 200, "message": "处理成功", "data": data}

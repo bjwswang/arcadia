@@ -30,7 +30,6 @@ def main():
                         help="Specifies the path to the dataset for evaluation. Will use fiqa dataset if not set.")
 
     args = parser.parse_args()
-    
     model = args.model
     api_base = args.apibase
     api_key = args.apikey
