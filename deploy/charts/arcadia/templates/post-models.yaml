@@ -87,7 +87,7 @@ spec:
     arXiv: https://arxiv.org/abs/2309.16609
 
     通义为阿里云大模型的统一品牌,覆盖语言、听觉、多模态等领域,致力于实现类人智慧的通用智能。
-  types: "llm,embedding"
+  types: "llm"
 ---
 apiVersion: arcadia.kubeagi.k8s.com.cn/v1alpha1
 kind: Model
