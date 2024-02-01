@@ -52,6 +52,9 @@ type Message struct {
 	Latency        int64      `gorm:"column:latency;type:int;comment:request latency, in ms" json:"latency" example:"1000"`
 }
 
+type Document struct {
+}
+
 type References []retriever.Reference
 
 func (Conversation) TableName() string {

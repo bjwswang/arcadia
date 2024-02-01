@@ -356,10 +356,12 @@ func (cs *ChatService) PromptStartersHandler() gin.HandlerFunc {
 //
 // @Param			app_namespace	formData	string	true	"The app namespace for this conversation"
 // @Param			app_name		formData	string	true	"The app name for this conversation"
-// @Param			conversation_id	formData	string	true	"The conversation id for this document"
+// @Param			query			formData	string	true	"The query to this document"
+// @Param			conversation_id	formData	string	false	"The conversation id for this document"
+// @Param			response_mode	formData	string	true	"The response mode to this conversation"
+// @Param			docs			formData	file	true	"This is the docs for the conversation"
 // @Param			chunk_size		formData	int		false	"The chunk size when load and split the document"
 // @Param			chunk_overlap	formData	int		false	"The chunk overlap when load and split the document"
-// @Param			docs			formData	file	true	"This is the docs for the conversation"
 //
 // @Success		200				{object}	chat.ConversationDocsRespBody
 // @Failure		400				{object}	chat.ErrorResp
@@ -373,7 +375,13 @@ func (cs *ChatService) ConversationDocs() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, chat.ErrorResp{Err: err.Error()})
 			return
 		}
+		// check if this is a new chat
+		req.NewChat = len(req.ConversationID) == 0
+		if req.NewChat {
+			req.ConversationID = string(uuid.NewUUID())
+		}
 
+		// TODO: allow multiple files
 		doc, err := c.FormFile("docs")
 		if err != nil {
 			klog.FromContext(c.Request.Context()).Error(err, "error receive and process uploaded documents(pdf, docx)")
@@ -382,7 +390,7 @@ func (cs *ChatService) ConversationDocs() gin.HandlerFunc {
 		}
 
 		// Upload the file to specific dst.
-		resp, err := cs.server.ReceiveConversationDocs(c, req, doc)
+		resp, err := cs.server.ReceiveConversationDoc(c, req, doc)
 		if err != nil {
 			klog.FromContext(c.Request.Context()).Error(err, "error receive and process uploaded documents(pdf, docx)")
 			c.JSON(http.StatusInternalServerError, chat.ErrorResp{Err: err.Error()})
