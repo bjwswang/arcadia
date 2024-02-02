@@ -212,7 +212,10 @@ func (cs *ChatServer) SummarizeConversationDoc(ctx context.Context, req Conversa
 			errStr += fmt.Sprintf(" ErrEmbedding: %s", errEmbedding.Error())
 			// break once error occurs
 			ctx.Done()
+			return
 		}
+		klog.V(1).ErrorS(errEmbedding, "ErrEmbedding", "document", doc.Filename, "conversation", "")
+		klog.V(5).Infof("Generate embeddings for doc %s is successful!")
 	}()
 
 	// For summary generation
@@ -231,9 +234,12 @@ func (cs *ChatServer) SummarizeConversationDoc(ctx context.Context, req Conversa
 		summary, errSummary = cs.GenerateSingleDocSummary(ctx, req, doc, documents, respStream)
 		if errSummary != nil {
 			// break once error occurs
-			errStr += fmt.Sprintf(" ErrSummary: %s", errEmbedding.Error())
+			errStr += fmt.Sprintf(" ErrSummary: %s", errSummary.Error())
 			ctx.Done()
+			klog.V(1).ErrorS(errSummary, "ErrSummary", "document", doc.Filename, "conversation", "")
+			return
 		}
+		klog.V(5).Infof("Generate summarization is done! Summary: %s", summary)
 	}()
 	// wait until all finished
 	wg.Wait()
