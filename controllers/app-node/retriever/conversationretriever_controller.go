@@ -31,58 +31,58 @@ import (
 	appnode "github.com/kubeagi/arcadia/controllers/app-node"
 )
 
-// KnowledgeBaseRetrieverReconciler reconciles a KnowledgeBaseRetriever object
-type KnowledgeBaseRetrieverReconciler struct {
+// ConversationRetrieverReconciler reconciles a ConversationRetriever object
+type ConversationRetrieverReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=retriever.arcadia.kubeagi.k8s.com.cn,resources=knowledgebaseretrievers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=retriever.arcadia.kubeagi.k8s.com.cn,resources=knowledgebaseretrievers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=retriever.arcadia.kubeagi.k8s.com.cn,resources=knowledgebaseretrievers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=retriever.arcadia.kubeagi.k8s.com.cn,resources=conversationretrievers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=retriever.arcadia.kubeagi.k8s.com.cn,resources=conversationretrievers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=retriever.arcadia.kubeagi.k8s.com.cn,resources=conversationretrievers/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
-func (r *KnowledgeBaseRetrieverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ConversationRetrieverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.V(5).Info("Start KnowledgeBaseRetriever Reconcile")
-	instance := &api.KnowledgeBaseRetriever{}
+	log.V(5).Info("Start ConversationRetriever Reconcile")
+	instance := &api.ConversationRetriever{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		// There's no need to requeue if the resource no longer exists.
 		// Otherwise, we'll be requeued implicitly because we return an error.
-		log.V(1).Info("Failed to get KnowledgeBaseRetriever")
+		log.V(1).Info("Failed to get ConversationRetriever")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log = log.WithValues("Generation", instance.GetGeneration(), "ObservedGeneration", instance.Status.ObservedGeneration, "creator", instance.Spec.Creator)
-	log.V(5).Info("Get KnowledgeBaseRetriever instance")
+	log.V(5).Info("Get ConversationRetriever instance")
 
 	// Add a finalizer.Then, we can define some operations which should
-	// occur before the KnowledgeBaseRetriever to be deleted.
+	// occur before the ConversationRetriever to be deleted.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if newAdded := controllerutil.AddFinalizer(instance, arcadiav1alpha1.Finalizer); newAdded {
-		log.Info("Try to add Finalizer for KnowledgeBaseRetriever")
+		log.Info("Try to add Finalizer for ConversationRetriever")
 		if err := r.Update(ctx, instance); err != nil {
-			log.Error(err, "Failed to update KnowledgeBaseRetriever to add finalizer, will try again later")
+			log.Error(err, "Failed to update ConversationRetriever to add finalizer, will try again later")
 			return ctrl.Result{}, err
 		}
-		log.Info("Adding Finalizer for KnowledgeBaseRetriever done")
+		log.Info("Adding Finalizer for ConversationRetriever done")
 		return ctrl.Result{}, nil
 	}
 
-	// Check if the KnowledgeBaseRetriever instance is marked to be deleted, which is
+	// Check if the ConversationRetriever instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if instance.GetDeletionTimestamp() != nil && controllerutil.ContainsFinalizer(instance, arcadiav1alpha1.Finalizer) {
-		log.Info("Performing Finalizer Operations for KnowledgeBaseRetriever before delete CR")
+		log.Info("Performing Finalizer Operations for ConversationRetriever before delete CR")
 		// TODO perform the finalizer operations here, for example: remove vectorstore data?
-		log.Info("Removing Finalizer for KnowledgeBaseRetriever after successfully performing the operations")
+		log.Info("Removing Finalizer for ConversationRetriever after successfully performing the operations")
 		controllerutil.RemoveFinalizer(instance, arcadiav1alpha1.Finalizer)
 		if err := r.Update(ctx, instance); err != nil {
-			log.Error(err, "Failed to remove the finalizer for KnowledgeBaseRetriever")
+			log.Error(err, "Failed to remove the finalizer for ConversationRetriever")
 			return ctrl.Result{}, err
 		}
-		log.Info("Remove KnowledgeBaseRetriever done")
+		log.Info("Remove ConversationRetriever done")
 		return ctrl.Result{}, nil
 	}
 
@@ -97,7 +97,7 @@ func (r *KnowledgeBaseRetrieverReconciler) Reconcile(ctx context.Context, req ct
 	return result, err
 }
 
-func (r *KnowledgeBaseRetrieverReconciler) reconcile(ctx context.Context, log logr.Logger, instance *api.KnowledgeBaseRetriever) (*api.KnowledgeBaseRetriever, ctrl.Result, error) {
+func (r *ConversationRetrieverReconciler) reconcile(ctx context.Context, log logr.Logger, instance *api.ConversationRetriever) (*api.ConversationRetriever, ctrl.Result, error) {
 	// Observe generation change
 	if instance.Status.ObservedGeneration != instance.Generation {
 		instance.Status.ObservedGeneration = instance.Generation
@@ -111,20 +111,20 @@ func (r *KnowledgeBaseRetrieverReconciler) reconcile(ctx context.Context, log lo
 	if instance.Status.IsReady() {
 		return instance, ctrl.Result{}, nil
 	}
-	// Note: should change here
-	// TODO: we should do more checks later.For example:
-	// LLM status
-	// Prompt status
+
 	if err := appnode.CheckAndUpdateAnnotation(ctx, log, r.Client, instance); err != nil {
 		instance.Status.SetConditions(instance.Status.ErrorCondition(err.Error())...)
 	} else {
 		instance.Status.SetConditions(instance.Status.ReadyCondition()...)
 	}
+
+	// TODO:Check LLM,Embedder,VectorStore
+
 	return instance, ctrl.Result{}, nil
 }
 
-func (r *KnowledgeBaseRetrieverReconciler) patchStatus(ctx context.Context, instance *api.KnowledgeBaseRetriever) error {
-	latest := &api.KnowledgeBaseRetriever{}
+func (r *ConversationRetrieverReconciler) patchStatus(ctx context.Context, instance *api.ConversationRetriever) error {
+	latest := &api.ConversationRetriever{}
 	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(instance), latest); err != nil {
 		return err
 	}
@@ -133,17 +133,17 @@ func (r *KnowledgeBaseRetrieverReconciler) patchStatus(ctx context.Context, inst
 	}
 	patch := client.MergeFrom(latest.DeepCopy())
 	latest.Status = instance.Status
-	return r.Client.Status().Patch(ctx, latest, patch, client.FieldOwner("KnowledgeBaseRetriever-controller"))
+	return r.Client.Status().Patch(ctx, latest, patch, client.FieldOwner("ConversationRetriever-controller"))
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KnowledgeBaseRetrieverReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ConversationRetrieverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&api.KnowledgeBaseRetriever{}).
+		For(&api.ConversationRetriever{}).
 		Complete(r)
 }
 
-func (r *KnowledgeBaseRetrieverReconciler) setCondition(instance *api.KnowledgeBaseRetriever, condition ...arcadiav1alpha1.Condition) *api.KnowledgeBaseRetriever {
+func (r *ConversationRetrieverReconciler) setCondition(instance *api.ConversationRetriever, condition ...arcadiav1alpha1.Condition) *api.ConversationRetriever {
 	instance.Status.SetConditions(condition...)
 	return instance
 }

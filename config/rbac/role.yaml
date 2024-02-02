@@ -578,6 +578,32 @@ rules:
 - apiGroups:
   - retriever.arcadia.kubeagi.k8s.com.cn
   resources:
+  - conversationretrievers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - retriever.arcadia.kubeagi.k8s.com.cn
+  resources:
+  - conversationretrievers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - retriever.arcadia.kubeagi.k8s.com.cn
+  resources:
+  - conversationretrievers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - retriever.arcadia.kubeagi.k8s.com.cn
+  resources:
   - knowledgebaseretrievers
   verbs:
   - create

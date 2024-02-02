@@ -28,9 +28,10 @@ const (
 )
 
 type Ref struct {
-	Kind   string `json:"kind,omitempty"`
-	Group  string `json:"group,omitempty"`
-	Length int    `json:"length,omitempty"`
+	Kind  string `json:"kind,omitempty"`
+	Group string `json:"group,omitempty"`
+	// Length is the maximum allowed number of this Kind of node
+	Length int `json:"length,omitempty"`
 }
 
 func (r *Ref) Len(i int) Ref {
@@ -70,6 +71,10 @@ var (
 	RetrievalQAChainRef = Ref{
 		Group: "chain.arcadia.kubeagi.k8s.com.cn",
 		Kind:  "RetrievalQAChain",
+	}
+	LLMChainRef = Ref{
+		Group: "chain.arcadia.kubeagi.k8s.com.cn",
+		Kind:  "LLMChain",
 	}
 	CommonRef = Ref{}
 )
