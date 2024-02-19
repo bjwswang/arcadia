@@ -136,6 +136,15 @@ resources:
   version: v1alpha1
 - api:
     crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: arcadia.kubeagi.k8s.com.cn
+  group: retriever
+  kind: ConversationRetriever
+  path: github.com/kubeagi/arcadia/api/app-node/retriever/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
   controller: true
   domain: arcadia.kubeagi.k8s.com.cn
   group: prompt

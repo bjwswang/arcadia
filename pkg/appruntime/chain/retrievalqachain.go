@@ -94,6 +94,11 @@ func (l *RetrievalQAChain) Run(ctx context.Context, cli dynamic.Interface, args 
 	if !ok {
 		return args, errors.New("no history")
 	}
+	// // TODO: implement this _conversation_retriever
+	// _, ok = args["_conversation_retriever"]
+	// if !ok {
+	// 	klog.V(3).Infof("no _conversation_retriever")
+	// }
 	history, ok := v4.(langchainschema.ChatMessageHistory)
 	if !ok {
 		return args, errors.New("prompt not prompts.FormatPrompter")

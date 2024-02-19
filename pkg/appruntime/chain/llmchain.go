@@ -80,6 +80,18 @@ func (l *LLMChain) Run(ctx context.Context, cli dynamic.Interface, args map[stri
 	if !ok {
 		return args, errors.New("prompt not prompts.FormatPrompter")
 	}
+	// TODO: implement this _conversation_retriever
+	_, ok = args["_conversation_retriever"]
+	if !ok {
+		klog.V(3).Infof("no _conversation_retriever")
+	}
+
+	// if conversationRetriever, ok := v3.(*appretriever.ConversationRetriever); ok {
+	// 	stuffDocuments = appretriever.NewStuffDocuments(llmChain, conversationRetriever.DocNullReturn)
+	// 	baseChain = stuffDocuments
+	// } else {
+	// 	baseChain = chains.NewStuffDocuments(llmChain)
+	// }
 	// _history is optional
 	// if set ,only ChatMessageHistory allowed
 	var history langchaingoschema.ChatMessageHistory
