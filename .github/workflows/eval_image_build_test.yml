@@ -1,4 +1,4 @@
-name: Build KubeAGI Evaluation Image
+name: Test Build KubeAGI Evaluation Image
 
 on:
   pull_request:
