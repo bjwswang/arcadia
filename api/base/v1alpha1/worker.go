@@ -30,6 +30,7 @@ type WorkerType string
 const (
 	WorkerTypeFastchatNormal WorkerType = "fastchat"
 	WorkerTypeFastchatVLLM   WorkerType = "fastchat-vllm"
+	WorkerTypeCoreLibraryCLI WorkerType = "core-library-cli"
 	WorkerTypeUnknown        WorkerType = "unknown"
 )
 

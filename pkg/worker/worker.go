@@ -242,6 +242,12 @@ func NewPodWorker(ctx context.Context, c client.Client, s *runtime.Scheme, w *ar
 			return nil, fmt.Errorf("failed to new a runner with %w", err)
 		}
 		podWorker.r = r
+	case arcadiav1alpha1.WorkerTypeCoreLibraryCLI:
+		r, err := NewCoreLibraryCLIRunner(c, w.DeepCopy())
+		if err != nil {
+			return nil, fmt.Errorf("failed to new a runner with %w", err)
+		}
+		podWorker.r = r
 	default:
 		return nil, fmt.Errorf("worker %s with type %s not supported in worker", w.Name, w.Type())
 	}
@@ -262,6 +268,12 @@ func (podWorker *PodWorker) Model() *arcadiav1alpha1.Model {
 // Now we have a pvc(if configured), service, LLM(if a llm model), Embedder(if a embedding model)
 func (podWorker *PodWorker) BeforeStart(ctx context.Context) error {
 	var err error
+
+	// Capability Checks
+	if podWorker.Model().IsRerankingModel() && podWorker.Worker().Type() != arcadiav1alpha1.WorkerTypeCoreLibraryCLI {
+		return errors.New("only core-library-cli can host reranking models")
+	}
+
 	// If the local directory is mounted, there is no need to create the pvc
 	if podWorker.Worker().Spec.Storage != nil && podWorker.storage.HostPath == nil {
 		pvc := &corev1.PersistentVolumeClaim{
