@@ -39,6 +39,8 @@ const (
 type ModelRunner interface {
 	// Device used when running model
 	Device() Device
+	// NumberOfGPUs used when running model
+	NumberOfGPUs() string
 	// Build a model runner instance
 	Build(ctx context.Context, model *arcadiav1alpha1.TypedObjectReference) (any, error)
 }
@@ -58,6 +60,7 @@ func NewRunnerFastchat(c client.Client, w *arcadiav1alpha1.Worker) (ModelRunner,
 	}, nil
 }
 
+// Device utilized by this runner
 func (runner *RunnerFastchat) Device() Device {
 	return DeviceBasedOnResource(runner.w.Spec.Resources.Limits)
 }
