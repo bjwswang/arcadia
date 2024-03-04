@@ -1,4 +1,4 @@
-{{- if and (.Values.portal.enabled) (.Values.portal.kubebbEnabled) }}
+{{- if and (.Values.ops-console.enabled) (.Values.ops-console.kubebbEnabled) }}
 apiVersion: core.kubebb.k8s.com.cn/v1alpha1
 kind: Portal
 metadata:

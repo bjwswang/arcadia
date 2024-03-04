@@ -1,4 +1,4 @@
-{{- if .Values.portal.enabled }}
+{{- if .Values.ops-console.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,7 +15,7 @@ spec:
         app: {{ .Release.Name }}-portal
     spec:
       containers:
-        - image: {{ .Values.portal.image }}
+        - image: {{ .Values.ops-console.image }}
           imagePullPolicy: IfNotPresent
           name: kubeagi-portal
           ports:
@@ -40,7 +40,7 @@ spec:
     app: {{ .Release.Name }}-portal
   ports:
     - name: api
-      port: {{ .Values.portal.port }}
+      port: {{ .Values.ops-console.port }}
       protocol: TCP
-      targetPort: {{ .Values.portal.port }}
+      targetPort: {{ .Values.ops-console.port }}
 {{- end }}
