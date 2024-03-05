@@ -44,7 +44,11 @@ type Conversation struct {
 
 // Message represent a message in storage
 type Message struct {
-	ID             string     `gorm:"column:id;primaryKey;type:uuid;comment:message id" json:"id" example:"4f3546dd-5404-4bf8-a3bc-4fa3f9a7ba24"`
+	ID string `gorm:"column:id;primaryKey;type:uuid;comment:message id" json:"id" example:"4f3546dd-5404-4bf8-a3bc-4fa3f9a7ba24"`
+	// Action indicates what is this message for
+	// Chat(by default),UPLOAD,etc...
+	Action string `gorm:"column:action;type:string;comment:user action" json:"action" example:"UPLOAD"`
+
 	Query          string     `gorm:"column:query;type:string;comment:user input" json:"query" example:"旷工最小计算单位为多少天？"`
 	Answer         string     `gorm:"column:answer;type:string;comment:ai response" json:"answer" example:"旷工最小计算单位为0.5天。"`
 	References     References `gorm:"column:references;type:json;comment:references" json:"references,omitempty"`
