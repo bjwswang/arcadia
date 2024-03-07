@@ -82,6 +82,7 @@ func (dl *DocumentLoader) Run(ctx context.Context, cli client.Client, args map[s
 	var allDocs []schema.Document
 	var allDocsContent []string
 
+	// TODO: skip if document already been processed,just return a abstract summary
 	for _, file := range files {
 		ossInfo := &arcadiav1alpha1.OSS{Bucket: dl.RefNamespace()}
 		ossInfo.Object = file
