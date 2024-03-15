@@ -480,6 +480,7 @@ func (r *KnowledgeBaseReconciler) reconcileFileGroup(ctx context.Context, log lo
 			continue
 		}
 		defer file.Close()
+		startTime := time.Now()
 		if err = r.handleFile(ctx, log, file, info.Object, tags, kb, vectorStore, embedder); err != nil {
 			if errors.Is(err, errFileSkipped) {
 				fileDetail.UpdateErr(err, arcadiav1alpha1.FileProcessPhaseSkipped)
@@ -490,6 +491,8 @@ func (r *KnowledgeBaseReconciler) reconcileFileGroup(ctx context.Context, log lo
 			fileDetail.UpdateErr(err, arcadiav1alpha1.FileProcessPhaseFailed)
 			continue
 		}
+		// time cost for file process
+		fileDetail.TimeCost = int64(time.Since(startTime).Milliseconds())
 		r.mu.Lock()
 		r.HasHandledSuccessPath[r.hasHandledPathKey(kb, group, path)] = true
 		r.mu.Unlock()
@@ -501,6 +504,11 @@ func (r *KnowledgeBaseReconciler) reconcileFileGroup(ctx context.Context, log lo
 
 func (r *KnowledgeBaseReconciler) handleFile(ctx context.Context, log logr.Logger, file io.ReadCloser, fileName string, tags map[string]string, kb *arcadiav1alpha1.KnowledgeBase, store *arcadiav1alpha1.VectorStore, embedder *arcadiav1alpha1.Embedder) (err error) {
 	log = log.WithValues("fileName", fileName, "tags", tags)
+	startTime := time.Now()
+	defer func() {
+		elapsedTime := time.Since(startTime)
+		log.Info("handle file elapsed time", "elapsedTime", elapsedTime)
+	}()
 	if !embedder.Status.IsReady() {
 		return errEmbedderNotReady
 	}
