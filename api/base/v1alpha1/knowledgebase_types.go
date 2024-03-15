@@ -24,6 +24,10 @@ import (
 type KnowledgeBaseSpec struct {
 	CommonSpec `json:",inline"`
 
+	// Type defines the type of knowledgebase
+	// +kubebuilder:default=normal
+	Type KnowledgeBaseType `json:"type,omitempty"`
+
 	// Embedder defines the embedder to embedding files
 	Embedder *TypedObjectReference `json:"embedder,omitempty"`
 
