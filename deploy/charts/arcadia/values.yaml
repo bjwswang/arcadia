@@ -1,6 +1,4 @@
 global:
-  oss:
-    bucket: &default-oss-bucket "arcadia"
   ## @param global.defaultVectorStoreType Defines the default vector database type, currently `chroma` and `pgvector` are available
   ## When the option is `chroma`, it needs `chromadb.enabled` to be `true` as well to work.
   ## When the option is `pgvector`, it needs `postgresql.enabled` to be `true` as well to work.
@@ -19,6 +17,18 @@ global:
           - minio-api.<replaced-ingress-nginx-ip>.nip.io
           - postgresql.<replaced-ingress-nginx-ip>.nip.io
         ip: <replaced-ingress-nginx-ip>
+
+# @section config is used to update configurations for this platform
+config:
+  # embedder model by default
+  embedder:
+    enabled: false
+    model: "bge-large-zh-v1.5"
+  # reranking model by default
+  rerank:
+    enabled: true
+    model: "bge-reranker-large"
+
 
 # @section controller is used as the core controller for arcadia
 # @param image Image to be used
@@ -115,7 +125,7 @@ minio:
       - minio-console.<replaced-ingress-nginx-ip>.nip.io
   buckets:
     # Name of the bucket
-    - name: *default-oss-bucket
+    - name: "arcadia"
       # Policy to be set on the
       # bucket [none|download|upload|public|custom]
       # if set to custom, customPolicy must be set.
@@ -189,6 +199,3 @@ ray:
       headAddress: raycluster-kuberay-head-svc.kuberay-system.svc:6379
       pythonVersion: 3.9.18
       dashboardHost: raycluster-kuberay-head-svc.kuberay-system.svc:8265
-
-rerank:
-  enabled: true
