@@ -30,6 +30,7 @@ import (
 	"github.com/kubeagi/arcadia/api/base/v1alpha1"
 	"github.com/kubeagi/arcadia/apiserver/graph/generated"
 	"github.com/kubeagi/arcadia/apiserver/pkg/common"
+	"github.com/kubeagi/arcadia/apiserver/pkg/utils"
 	graphqlutils "github.com/kubeagi/arcadia/apiserver/pkg/utils"
 	"github.com/kubeagi/arcadia/pkg/config"
 )
@@ -287,6 +288,10 @@ func UpdateKnowledgeBase(ctx context.Context, c client.Client, input *generated.
 	err := c.Get(ctx, types.NamespacedName{Namespace: input.Namespace, Name: input.Name}, kb)
 	if err != nil {
 		return nil, err
+	}
+
+	if input.Annotations != nil {
+		kb.ObjectMeta.Annotations = utils.MapAny2Str(input.Annotations)
 	}
 
 	if input.DisplayName != nil && *input.DisplayName != kb.Spec.DisplayName {
