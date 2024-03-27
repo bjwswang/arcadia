@@ -12,7 +12,7 @@ env:
 
 jobs:
   image:
-    if: github.repository == 'kubeagi/arcadia'
+    if: github.repository == 'bjwswang/arcadia'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
