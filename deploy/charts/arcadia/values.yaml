@@ -74,15 +74,17 @@ opsconsole:
   ingress:
     path: kubeagi-portal-public
     host: portal.<replaced-ingress-nginx-ip>.nip.io
-  
-# @section portal for arcadia GPT store
-agentportal:
+
+# @section configurations for GPT Store
+gpts:
   enabled: true
-  kubebbEnabled: true
-  image: kubeagi/agent-portal:latest
-  ingress:
-    path: ""
-    host: gpts.<replaced-ingress-nginx-ip>.nip.io
+  # all gpt resources are public in this namespace
+  public_namespace: gpts
+  agentportal:
+    image: kubeagi/agent-portal:latest
+    ingress:
+      path: ""
+      host: gpts.<replaced-ingress-nginx-ip>.nip.io
 
 # @section fastchat is used as fastchat configurations for arcadia
 fastchat:
